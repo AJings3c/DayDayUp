@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DayDayUp - 学习历程</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3B82F6",
+                        "background-light": "#F3F4F6",
+                        "background-dark": "#111827",
+                        "surface-light": "#FFFFFF",
+                        "surface-dark": "#1F2937",
+                        "text-primary-light": "#111827",
+                        "text-primary-dark": "#F9FAFB",
+                        "text-secondary-light": "#6B7280",
+                        "text-secondary-dark": "#9CA3AF",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.75rem",
+                    },
+                },
+            },
+        };
+    </script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark font-display h-screen flex flex-col antialiased">
+<header class="bg-surface-light dark:bg-surface-dark px-4 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
+<h1 class="text-xl font-bold tracking-tight">DayDayUp</h1>
+<button class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden border border-gray-300 dark:border-gray-600">
+<img alt="User avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1OSvcodbKMiVziY4rIzdIiDmuOM06UnCJcBm7fUBxUlWy-UTiMpYRBX7tnjv5Chghfh8CoV9a3IC6CcWk3t0ZaMiu7Vb-JKt1Cwa3Tm7zr2J6AdMFcFLmFMeJG9Ptdd5IDle24SmrU0ycRstg4GscJgitmRHZID2Sj4uqUXBNudltIAJcHDTV-s0yZXjpMa_03zo2vskveDRncoieLTQVJvbm0-kBO7z6Y1Q7OVexF_TctwA9Sx0i9GLn5ZnWFAQeKZrGfGNcep4"/>
+</button>
+</header>
+<main class="flex-1 overflow-y-auto pb-20">
+<div class="px-4 py-6 max-w-md mx-auto space-y-8">
+<section class="space-y-2">
+<h2 class="text-2xl font-bold">学习历程</h2>
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm leading-relaxed">
+                    回顾已归档任务，记录你的成长足迹。
+                </p>
+</section>
+<section class="space-y-4">
+<h3 class="text-lg font-semibold flex items-center gap-2">
+<span class="material-icons text-primary text-xl">bar_chart</span>
+                    历程统计
+                </h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-light dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center space-y-1">
+<span class="text-3xl font-bold text-primary">124</span>
+<span class="text-xs text-text-secondary-light dark:text-text-secondary-dark font-medium">累计专注 (时)</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center space-y-1">
+<span class="text-3xl font-bold text-green-500">89</span>
+<span class="text-xs text-text-secondary-light dark:text-text-secondary-dark font-medium">闭环任务</span>
+</div>
+</div>
+</section>
+<section>
+<div class="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+<button class="px-4 py-1.5 rounded-full bg-gray-200 dark:bg-gray-700 text-sm font-medium whitespace-nowrap">全部</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-sm font-medium whitespace-nowrap">已闭环</button>
+<button class="px-4 py-1.5 rounded-full bg-primary text-white text-sm font-medium whitespace-nowrap shadow-sm">未闭环</button>
+</div>
+</section>
+<section class="space-y-4">
+<h3 class="text-lg font-semibold flex items-center gap-2">
+<span class="material-icons text-primary text-xl">history</span>
+                    历程详情
+                </h3>
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-red-100 dark:border-red-900/30 space-y-4 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-red-400"></div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-bold text-base mb-1">完成期末论文初稿</h4>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">项目管理课程</p>
+</div>
+<span class="px-2 py-1 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-xs font-semibold rounded-md">未闭环</span>
+</div>
+<div class="pt-2">
+<h5 class="text-sm font-semibold mb-3 flex items-center gap-1.5">
+<span class="material-icons text-[16px] text-gray-400">timeline</span>
+                            时间轴
+                        </h5>
+<div class="space-y-3 relative before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 dark:before:via-gray-700 before:to-transparent">
+<div class="relative flex items-start gap-4">
+<div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 border-2 border-surface-light dark:border-surface-dark z-10">
+<span class="material-icons text-[12px] text-blue-500">add_task</span>
+</div>
+<div class="flex-1 pb-1">
+<p class="text-sm font-medium">制定计划</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">10月12日</p>
+</div>
+</div>
+<div class="relative flex items-start gap-4">
+<div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0 border-2 border-surface-light dark:border-surface-dark z-10">
+<span class="material-icons text-[12px] text-green-500">play_arrow</span>
+</div>
+<div class="flex-1 pb-1">
+<p class="text-sm font-medium">开始执行</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">10月13日 · 专注了 4.5 小时</p>
+</div>
+</div>
+<div class="relative flex items-start gap-4">
+<div class="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center shrink-0 border-2 border-surface-light dark:border-surface-dark z-10">
+<span class="material-icons text-[12px] text-orange-500">warning</span>
+</div>
+<div class="flex-1 pb-1">
+<p class="text-sm font-medium text-orange-600 dark:text-orange-400">检测到阻塞</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">10月15日 · 缺乏关键文献数据</p>
+</div>
+</div>
+<div class="relative flex items-start gap-4">
+<div class="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0 border-2 border-surface-light dark:border-surface-dark z-10">
+<span class="material-icons text-[12px] text-red-500">event_busy</span>
+</div>
+<div class="flex-1 pb-1">
+<p class="text-sm font-medium text-red-600 dark:text-red-400">截止时间已过</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">10月18日</p>
+</div>
+</div>
+<div class="relative flex items-start gap-4">
+<div class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 border-2 border-surface-light dark:border-surface-dark z-10">
+<span class="material-icons text-[12px] text-gray-500 dark:text-gray-400">pause_circle_filled</span>
+</div>
+<div class="flex-1 pb-1">
+<p class="text-sm font-medium">卡住 / 未闭环</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">任务已归档</p>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-3">
+<button class="flex-1 py-2 px-4 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons text-[18px]">edit_note</span>
+                            记录卡住原因
+                        </button>
+<button class="flex-1 py-2 px-4 rounded-lg bg-primary text-white text-sm font-medium flex items-center justify-center gap-1.5 shadow-sm hover:bg-blue-600 transition-colors">
+<span class="material-icons text-[18px]">check_circle</span>
+                            补完成
+                        </button>
+</div>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 space-y-4 relative overflow-hidden opacity-75">
+<div class="absolute top-0 left-0 w-1 h-full bg-green-400"></div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-bold text-base mb-1 text-gray-500 dark:text-gray-400 line-through">阅读《设计心理学》前三章</h4>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">个人提升</p>
+</div>
+<span class="px-2 py-1 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 text-xs font-semibold rounded-md">已闭环</span>
+</div>
+<div class="text-sm text-text-secondary-light dark:text-text-secondary-dark flex items-center gap-2">
+<span class="material-icons text-[16px]">check_circle_outline</span>
+                        按时完成 · 累计专注 3 小时
+                     </div>
+</div>
+</section>
+</div>
+</main>
+<nav class="bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-800 fixed bottom-0 w-full max-w-md mx-auto z-20 pb-safe">
+<div class="flex justify-around items-center px-2 py-2">
+<button class="flex flex-col items-center p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary transition-colors min-w-[64px]">
+<span class="material-icons mb-1">hourglass_empty</span>
+<span class="text-[10px] font-medium">专注</span>
+</button>
+<button class="flex flex-col items-center p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary transition-colors min-w-[64px]">
+<span class="material-icons mb-1">today</span>
+<span class="text-[10px] font-medium">今日</span>
+</button>
+<div class="-mt-6 relative">
+<button class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors transform hover:scale-105">
+<span class="material-icons text-2xl">add</span>
+</button>
+</div>
+<button class="flex flex-col items-center p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-primary transition-colors min-w-[64px]">
+<span class="material-icons mb-1">view_list</span>
+<span class="text-[10px] font-medium">任务</span>
+</button>
+<button class="flex flex-col items-center p-2 text-primary min-w-[64px]">
+<span class="material-icons mb-1">route</span>
+<span class="text-[10px] font-medium">历程</span>
+</button>
+</div>
+</nav>
+<style>.pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }.hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+
+</body></html>

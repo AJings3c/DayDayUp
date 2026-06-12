@@ -1,0 +1,789 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5A0000010000000000000001 /* DayDayUpApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000001 /* DayDayUpApp.swift */; };
+		5A0000010000000000000002 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000002 /* Models.swift */; };
+		5A0000010000000000000003 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000003 /* DesignSystem.swift */; };
+		5A0000010000000000000005 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000005 /* Views.swift */; };
+		5A0000010000000000000006 /* ReminderBackupServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000006 /* ReminderBackupServices.swift */; };
+		5A000001000000000000000D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A000002000000000000000E /* Assets.xcassets */; };
+		5A0000010000000000000010 /* DayDayUpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000010 /* DayDayUpTests.swift */; };
+		5A0000010000000000000030 /* RuleEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000030 /* RuleEngines.swift */; };
+		5A0000010000000000000021 /* LaunchCountdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000021 /* LaunchCountdownView.swift */; };
+		5A0000010000000000000022 /* TodayExecutionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000022 /* TodayExecutionViews.swift */; };
+		5A0000010000000000000023 /* TaskViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000023 /* TaskViews.swift */; };
+		5A0000010000000000000024 /* ScoreViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000024 /* ScoreViews.swift */; };
+		5A0000010000000000000025 /* JourneyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000025 /* JourneyViews.swift */; };
+		5A0000010000000000000026 /* SettingsBackupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000026 /* SettingsBackupView.swift */; };
+		5A0000010000000000000027 /* SharedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000020000000000000027 /* SharedViews.swift */; };
+		5A1000010000000000000001 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000020000000000000001 /* WidgetShared.swift */; };
+		5A1000010000000000000002 /* WidgetSnapshotWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000020000000000000002 /* WidgetSnapshotWriter.swift */; };
+		5A1000010000000000000003 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000020000000000000001 /* WidgetShared.swift */; };
+		5A1000010000000000000004 /* NextTaskWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000020000000000000004 /* NextTaskWidget.swift */; };
+		5A1000010000000000000005 /* DayDayUpWidgetsExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5A1000020000000000000005 /* DayDayUpWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5A00000C0000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5A0000080000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A0000050000000000000001;
+			remoteInfo = DayDayUp;
+		};
+		5A10000C0000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5A0000080000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A1000050000000000000001;
+			remoteInfo = DayDayUpWidgetsExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5A10000D0000000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5A1000010000000000000005 /* DayDayUpWidgetsExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5A0000020000000000000001 /* DayDayUpApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDayUpApp.swift; sourceTree = "<group>"; };
+		5A0000020000000000000002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		5A0000020000000000000003 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		5A0000020000000000000005 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
+		5A0000020000000000000006 /* ReminderBackupServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderBackupServices.swift; sourceTree = "<group>"; };
+		5A0000020000000000000007 /* DayDayUp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DayDayUp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A000002000000000000000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5A0000020000000000000010 /* DayDayUpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDayUpTests.swift; sourceTree = "<group>"; };
+		5A0000020000000000000012 /* DayDayUpTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DayDayUpTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A0000020000000000000030 /* RuleEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleEngines.swift; sourceTree = "<group>"; };
+		5A0000020000000000000021 /* LaunchCountdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchCountdownView.swift; sourceTree = "<group>"; };
+		5A0000020000000000000022 /* TodayExecutionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayExecutionViews.swift; sourceTree = "<group>"; };
+		5A0000020000000000000023 /* TaskViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskViews.swift; sourceTree = "<group>"; };
+		5A0000020000000000000024 /* ScoreViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreViews.swift; sourceTree = "<group>"; };
+		5A0000020000000000000025 /* JourneyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyViews.swift; sourceTree = "<group>"; };
+		5A0000020000000000000026 /* SettingsBackupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackupView.swift; sourceTree = "<group>"; };
+		5A0000020000000000000027 /* SharedViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViews.swift; sourceTree = "<group>"; };
+		5A1000020000000000000001 /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
+		5A1000020000000000000002 /* WidgetSnapshotWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotWriter.swift; sourceTree = "<group>"; };
+		5A1000020000000000000003 /* DayDayUp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DayDayUp.entitlements; sourceTree = "<group>"; };
+		5A1000020000000000000004 /* NextTaskWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextTaskWidget.swift; sourceTree = "<group>"; };
+		5A1000020000000000000005 /* DayDayUpWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = DayDayUpWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A1000020000000000000006 /* DayDayUpWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DayDayUpWidgetsExtension.entitlements; sourceTree = "<group>"; };
+		5A1000020000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5A0000030000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A0000030000000000000010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A1000030000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5A0000040000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				5A0000040000000000000002 /* DayDayUp */,
+				5A0000040000000000000010 /* DayDayUpTests */,
+				5A1000040000000000000001 /* DayDayUpWidgetsExtension */,
+				5A0000040000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000002 /* DayDayUp */ = {
+			isa = PBXGroup;
+			children = (
+					5A0000040000000000000005 /* App */,
+					5A0000040000000000000006 /* Models */,
+					5A0000040000000000000030 /* Rules */,
+					5A1000040000000000000002 /* Shared */,
+					5A0000040000000000000009 /* Services */,
+				5A0000040000000000000007 /* Design */,
+				5A0000040000000000000008 /* Views */,
+				5A000002000000000000000E /* Assets.xcassets */,
+				5A1000020000000000000003 /* DayDayUp.entitlements */,
+			);
+			path = DayDayUp;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000005 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000001 /* DayDayUpApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000006 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000002 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+			5A0000040000000000000007 /* Design */ = {
+				isa = PBXGroup;
+				children = (
+					5A0000020000000000000003 /* DesignSystem.swift */,
+				);
+				path = Design;
+				sourceTree = "<group>";
+			};
+			5A0000040000000000000030 /* Rules */ = {
+				isa = PBXGroup;
+				children = (
+					5A0000020000000000000030 /* RuleEngines.swift */,
+				);
+				path = Rules;
+				sourceTree = "<group>";
+			};
+			5A0000040000000000000008 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000005 /* Views.swift */,
+				5A0000040000000000000020 /* Features */,
+				5A0000040000000000000028 /* Shared */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000020 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000040000000000000021 /* Launch */,
+				5A0000040000000000000022 /* Today */,
+				5A0000040000000000000023 /* Tasks */,
+				5A0000040000000000000024 /* Score */,
+				5A0000040000000000000025 /* Journey */,
+				5A0000040000000000000026 /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000021 /* Launch */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000021 /* LaunchCountdownView.swift */,
+			);
+			path = Launch;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000022 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000022 /* TodayExecutionViews.swift */,
+			);
+			path = Today;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000023 /* Tasks */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000023 /* TaskViews.swift */,
+			);
+			path = Tasks;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000024 /* Score */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000024 /* ScoreViews.swift */,
+			);
+			path = Score;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000025 /* Journey */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000025 /* JourneyViews.swift */,
+			);
+			path = Journey;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000026 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000026 /* SettingsBackupView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000028 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000027 /* SharedViews.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000009 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000006 /* ReminderBackupServices.swift */,
+				5A1000020000000000000002 /* WidgetSnapshotWriter.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		5A1000040000000000000002 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				5A1000020000000000000001 /* WidgetShared.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		5A1000040000000000000001 /* DayDayUpWidgetsExtension */ = {
+			isa = PBXGroup;
+			children = (
+				5A1000020000000000000004 /* NextTaskWidget.swift */,
+				5A1000020000000000000007 /* Info.plist */,
+				5A1000020000000000000006 /* DayDayUpWidgetsExtension.entitlements */,
+			);
+			path = DayDayUpWidgetsExtension;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000010 /* DayDayUpTests */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000010 /* DayDayUpTests.swift */,
+			);
+			path = DayDayUpTests;
+			sourceTree = "<group>";
+		};
+		5A0000040000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000020000000000000007 /* DayDayUp.app */,
+				5A0000020000000000000012 /* DayDayUpTests.xctest */,
+				5A1000020000000000000005 /* DayDayUpWidgetsExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5A0000050000000000000001 /* DayDayUp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A00000A0000000000000002 /* Build configuration list for PBXNativeTarget "DayDayUp" */;
+			buildPhases = (
+				5A0000060000000000000001 /* Sources */,
+				5A0000030000000000000001 /* Frameworks */,
+				5A0000070000000000000001 /* Resources */,
+				5A10000D0000000000000001 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5A10000B0000000000000001 /* PBXTargetDependency */,
+			);
+			name = DayDayUp;
+			productName = DayDayUp;
+			productReference = 5A0000020000000000000007 /* DayDayUp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5A0000050000000000000010 /* DayDayUpTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A00000A0000000000000010 /* Build configuration list for PBXNativeTarget "DayDayUpTests" */;
+			buildPhases = (
+				5A0000060000000000000010 /* Sources */,
+				5A0000030000000000000010 /* Frameworks */,
+				5A0000070000000000000010 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5A00000B0000000000000001 /* PBXTargetDependency */,
+			);
+			name = DayDayUpTests;
+			productName = DayDayUpTests;
+			productReference = 5A0000020000000000000012 /* DayDayUpTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5A1000050000000000000001 /* DayDayUpWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A10000A0000000000000001 /* Build configuration list for PBXNativeTarget "DayDayUpWidgetsExtension" */;
+			buildPhases = (
+				5A1000060000000000000001 /* Sources */,
+				5A1000030000000000000001 /* Frameworks */,
+				5A1000070000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DayDayUpWidgetsExtension;
+			productName = DayDayUpWidgetsExtension;
+			productReference = 5A1000020000000000000005 /* DayDayUpWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5A0000080000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					5A0000050000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					5A0000050000000000000010 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 5A0000050000000000000001;
+					};
+					5A1000050000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 5A00000A0000000000000001 /* Build configuration list for PBXProject "DayDayUp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5A0000040000000000000001;
+			productRefGroup = 5A0000040000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5A0000050000000000000001 /* DayDayUp */,
+				5A0000050000000000000010 /* DayDayUpTests */,
+				5A1000050000000000000001 /* DayDayUpWidgetsExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5A0000070000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A000001000000000000000D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A0000070000000000000010 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A1000070000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5A0000060000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+				files = (
+					5A0000010000000000000001 /* DayDayUpApp.swift in Sources */,
+					5A0000010000000000000002 /* Models.swift in Sources */,
+						5A0000010000000000000003 /* DesignSystem.swift in Sources */,
+					5A0000010000000000000030 /* RuleEngines.swift in Sources */,
+					5A1000010000000000000001 /* WidgetShared.swift in Sources */,
+						5A0000010000000000000006 /* ReminderBackupServices.swift in Sources */,
+					5A1000010000000000000002 /* WidgetSnapshotWriter.swift in Sources */,
+					5A0000010000000000000021 /* LaunchCountdownView.swift in Sources */,
+					5A0000010000000000000022 /* TodayExecutionViews.swift in Sources */,
+					5A0000010000000000000023 /* TaskViews.swift in Sources */,
+					5A0000010000000000000024 /* ScoreViews.swift in Sources */,
+					5A0000010000000000000025 /* JourneyViews.swift in Sources */,
+					5A0000010000000000000026 /* SettingsBackupView.swift in Sources */,
+					5A0000010000000000000027 /* SharedViews.swift in Sources */,
+					5A0000010000000000000005 /* Views.swift in Sources */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+		5A0000060000000000000010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A0000010000000000000010 /* DayDayUpTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A1000060000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A1000010000000000000003 /* WidgetShared.swift in Sources */,
+				5A1000010000000000000004 /* NextTaskWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5A00000B0000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5A0000050000000000000001 /* DayDayUp */;
+			targetProxy = 5A00000C0000000000000001 /* PBXContainerItemProxy */;
+		};
+		5A10000B0000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5A1000050000000000000001 /* DayDayUpWidgetsExtension */;
+			targetProxy = 5A10000C0000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5A0000090000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		5A0000090000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		5A0000090000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = DayDayUp/DayDayUp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DayDayUp;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSUserNotificationAlertStyle = alert;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.daydayup.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5A0000090000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = DayDayUp/DayDayUp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DayDayUp;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSUserNotificationAlertStyle = alert;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.daydayup.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		5A0000090000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.daydayup.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DayDayUp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DayDayUp";
+			};
+			name = Debug;
+		};
+		5A0000090000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.daydayup.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DayDayUp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DayDayUp";
+			};
+			name = Release;
+		};
+		5A1000090000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DayDayUpWidgetsExtension/DayDayUpWidgetsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DayDayUpWidgetsExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.daydayup.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5A1000090000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DayDayUpWidgetsExtension/DayDayUpWidgetsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DayDayUpWidgetsExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.daydayup.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5A00000A0000000000000001 /* Build configuration list for PBXProject "DayDayUp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A0000090000000000000001 /* Debug */,
+				5A0000090000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A00000A0000000000000002 /* Build configuration list for PBXNativeTarget "DayDayUp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A0000090000000000000003 /* Debug */,
+				5A0000090000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A00000A0000000000000010 /* Build configuration list for PBXNativeTarget "DayDayUpTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A0000090000000000000010 /* Debug */,
+				5A0000090000000000000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A10000A0000000000000001 /* Build configuration list for PBXNativeTarget "DayDayUpWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A1000090000000000000001 /* Debug */,
+				5A1000090000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5A0000080000000000000001 /* Project object */;
+}

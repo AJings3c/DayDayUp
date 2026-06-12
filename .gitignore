@@ -1,0 +1,29 @@
+.DS_Store
+
+# Xcode build products and indexes
+build/
+DerivedData/
+*.xcresult
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+*.xcuserstate
+xcuserdata/
+
+# Swift/LLVM coverage output
+*.profraw
+*.profdata
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# App archives and exports
+*.xcarchive
+*.ipa
+*.dSYM
+
+# Local editor state
+.vscode/
+.idea/

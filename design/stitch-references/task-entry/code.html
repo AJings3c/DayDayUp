@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DayDayUp - 数据与评分</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#727781",
+                    "on-tertiary-container": "#ffede2",
+                    "on-surface-variant": "#424750",
+                    "on-secondary-fixed-variant": "#304865",
+                    "inverse-on-surface": "#e8f2ff",
+                    "on-surface": "#111d27",
+                    "on-secondary-container": "#48617e",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb781",
+                    "tertiary-container": "#a25b1b",
+                    "secondary-fixed-dim": "#afc9ea",
+                    "on-primary-container": "#e9f0ff",
+                    "surface-container": "#e3efff",
+                    "ink-black": "#15202B",
+                    "on-secondary-fixed": "#001d36",
+                    "inverse-surface": "#26323d",
+                    "surface": "#f7f9ff",
+                    "tertiary-fixed": "#ffdcc4",
+                    "success-pine": "#247C5E",
+                    "secondary-fixed": "#d1e4ff",
+                    "on-error-container": "#93000a",
+                    "primary-fixed": "#d3e4ff",
+                    "surface-container-highest": "#d7e4f3",
+                    "danger-restrained": "#B54848",
+                    "recovered-purple": "#7A5CCF",
+                    "primary-fixed-dim": "#a3c9ff",
+                    "on-primary-fixed-variant": "#0b487f",
+                    "mist-line": "#D8E0EA",
+                    "surface-container-low": "#edf4ff",
+                    "secondary-container": "#c3dcff",
+                    "surface-glass": "#EEF3F8",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary": "#48607d",
+                    "on-background": "#111d27",
+                    "outline-variant": "#c2c6d1",
+                    "on-tertiary-fixed-variant": "#703800",
+                    "primary-container": "#3f6fa8",
+                    "on-tertiary-fixed": "#301400",
+                    "surface-mist": "#F6F8FB",
+                    "surface-bright": "#f7f9ff",
+                    "error-container": "#ffdad6",
+                    "background": "#f7f9ff",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#2e6098",
+                    "warning-amber": "#B46919",
+                    "surface-variant": "#d7e4f3",
+                    "error": "#ba1a1a",
+                    "on-error": "#ffffff",
+                    "primary": "#22568e",
+                    "inverse-primary": "#a3c9ff",
+                    "surface-selected": "#E8F0FA",
+                    "tertiary": "#844401",
+                    "surface-container-high": "#dde9f9",
+                    "on-primary-fixed": "#001c38",
+                    "surface-dim": "#cfdbea"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "12px",
+                    "gutter": "16px",
+                    "xl": "24px",
+                    "margin-desktop": "32px",
+                    "margin-mobile": "16px",
+                    "xxl": "32px",
+                    "sm": "8px",
+                    "xs": "4px",
+                    "lg": "16px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter", "sans-serif"],
+                    "label-xs": ["Inter", "sans-serif"],
+                    "title-sm": ["Inter", "sans-serif"],
+                    "display-lg": ["Inter", "sans-serif"],
+                    "headline-md": ["Inter", "sans-serif"],
+                    "metric-xl-mobile": ["JetBrains Mono", "monospace"],
+                    "metric-xl": ["JetBrains Mono", "monospace"]
+            },
+            "fontSize": {
+                    "body-md": ["14px", { "lineHeight": "22px", "fontWeight": "400" }],
+                    "label-xs": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                    "title-sm": ["17px", { "lineHeight": "24px", "fontWeight": "600" }],
+                    "display-lg": ["32px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                    "headline-md": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                    "metric-xl-mobile": ["22px", { "lineHeight": "28px", "fontWeight": "600" }],
+                    "metric-xl": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+            }
+          }
+        }
+      }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        body {
+            background-color: #f7f9ff;
+            color: #111d27;
+        }
+        
+        /* Native scrollbar styling for web */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D8E0EA;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c2c6d1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body-md text-body-md min-h-screen pb-24 md:pb-0 overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-lg h-14 bg-surface-glass dark:bg-surface-glass/10 backdrop-blur-xl border-b border-mist-line dark:border-outline-variant hidden md:flex">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">chip_extraction</span>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">DayDayUp</span>
+</div>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:opacity-80 hover:bg-surface-container-low transition-colors rounded-full p-1">settings</span>
+</div>
+</header>
+<!-- TopAppBar (Mobile) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-lg h-14 bg-surface-glass backdrop-blur-xl border-b border-mist-line md:hidden">
+<span class="material-symbols-outlined text-primary">chip_extraction</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">数据</span>
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</header>
+<!-- NavigationDrawer (Desktop) -->
+<nav class="hidden lg:flex flex-col h-screen fixed left-0 top-0 pt-20 bg-surface-glass dark:bg-surface-container-lowest/20 backdrop-blur-2xl border-r border-mist-line dark:border-outline-variant w-64 z-40">
+<div class="px-md mb-xl">
+<span class="font-title-sm text-title-sm text-primary dark:text-primary-fixed-dim">Squirrel's Granary</span>
+</div>
+<a class="flex items-center gap-md p-md mb-xs mx-sm transition-all duration-200 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined">timer</span>
+<span>专注</span>
+</a>
+<a class="flex items-center gap-md p-md mb-xs mx-sm transition-all duration-200 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined">play_circle</span>
+<span>Timer</span>
+</a>
+<a class="flex items-center gap-md p-md mb-xs mx-sm transition-all duration-200 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined">assignment</span>
+<span>任务</span>
+</a>
+<!-- Active Tab -->
+<a class="flex items-center gap-md p-md mb-xs mx-sm transition-all duration-200 bg-surface-selected dark:bg-secondary-container text-primary dark:text-on-secondary-container rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-bold">数据</span>
+</a>
+<a class="flex items-center gap-md p-md mb-xs mx-sm transition-all duration-200 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined">timeline</span>
+<span>历程</span>
+</a>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-20 px-margin-mobile md:px-margin-desktop lg:ml-64 max-w-7xl mx-auto flex flex-col gap-gutter">
+<!-- Page Header -->
+<div class="flex flex-col gap-xs mb-md">
+<h1 class="font-display-lg text-display-lg text-on-surface">数据与评分</h1>
+<p class="text-on-surface-variant">Review your persistent accumulation and preparation metrics.</p>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Execution Score Card (Spans 4 columns on desktop) -->
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-xl shadow-[0_4px_12px_rgba(21,32,43,0.08)] flex flex-col justify-between border border-surface-mist relative overflow-hidden">
+<div class="absolute -right-10 -top-10 w-40 h-40 bg-surface-selected rounded-full opacity-50 blur-3xl pointer-events-none"></div>
+<div class="flex items-center justify-between mb-lg relative z-10">
+<span class="font-title-sm text-title-sm text-on-surface">执行力评分</span>
+<span class="material-symbols-outlined text-primary">bolt</span>
+</div>
+<div class="flex flex-col items-center justify-center flex-1 py-md relative z-10">
+<div class="w-32 h-32 rounded-full bg-ink-black flex items-center justify-center border-4 border-surface-glass shadow-inner mb-sm">
+<span class="font-metric-xl text-metric-xl md:text-[48px] md:leading-[48px] text-on-tertiary">82</span>
+</div>
+<span class="bg-surface-selected text-primary px-sm py-xs rounded text-label-xs font-label-xs mb-xs">节奏稳定</span>
+<p class="text-center text-on-surface-variant text-sm px-4">节奏稳定。保持专注并妥善处理少量延迟。</p>
+</div>
+</div>
+<!-- Learning Execution Radar Chart (Spans 8 columns) -->
+<div class="md:col-span-8 bg-surface-container-lowest rounded-xl p-xl shadow-[0_4px_12px_rgba(21,32,43,0.08)] flex flex-col border border-surface-mist">
+<div class="flex items-center justify-between mb-lg">
+<span class="font-title-sm text-title-sm text-on-surface">执行力维度</span>
+<span class="material-symbols-outlined text-on-surface-variant">radar</span>
+</div>
+<div class="flex-1 w-full flex items-center justify-center min-h-[240px] relative">
+<!-- Pure CSS/SVG representation of Radar Chart to avoid JS dependencies in static HTML -->
+<svg class="w-full h-full max-w-[300px] max-h-[300px]" viewbox="0 0 200 200">
+<!-- Grid lines -->
+<polygon fill="none" points="100,20 170,60 170,140 100,180 30,140 30,60" stroke="#D8E0EA" stroke-width="1"></polygon>
+<polygon fill="none" points="100,40 152,70 152,130 100,160 48,130 48,70" stroke="#D8E0EA" stroke-width="1"></polygon>
+<polygon fill="none" points="100,60 135,80 135,120 100,140 65,120 65,80" stroke="#D8E0EA" stroke-width="1"></polygon>
+<polygon fill="none" points="100,80 117,90 117,110 100,120 83,110 83,90" stroke="#D8E0EA" stroke-width="1"></polygon>
+<!-- Axes -->
+<line stroke="#D8E0EA" stroke-width="1" x1="100" x2="100" y1="100" y2="20"></line>
+<line stroke="#D8E0EA" stroke-width="1" x1="100" x2="170" y1="100" y2="60"></line>
+<line stroke="#D8E0EA" stroke-width="1" x1="100" x2="170" y1="100" y2="140"></line>
+<line stroke="#D8E0EA" stroke-width="1" x1="100" x2="100" y1="100" y2="180"></line>
+<line stroke="#D8E0EA" stroke-width="1" x1="100" x2="30" y1="100" y2="140"></line>
+<line stroke="#D8E0EA" stroke-width="1" x1="100" x2="30" y1="100" y2="60"></line>
+<!-- Data Polygon (Sense Blue / primary) -->
+<polygon fill="#22568e" fill-opacity="0.15" points="100,45 155,75 160,135 100,150 45,125 60,65" stroke="#22568e" stroke-width="2"></polygon>
+<!-- Data Points -->
+<circle cx="100" cy="45" fill="#22568e" r="3"></circle>
+<circle cx="155" cy="75" fill="#22568e" r="3"></circle>
+<circle cx="160" cy="135" fill="#22568e" r="3"></circle>
+<circle cx="100" cy="150" fill="#22568e" r="3"></circle>
+<circle cx="45" cy="125" fill="#22568e" r="3"></circle>
+<circle cx="60" cy="65" fill="#22568e" r="3"></circle>
+<!-- Labels -->
+<text fill="#424750" font-family="Inter" font-size="8" text-anchor="middle" x="100" y="12">完成度</text>
+<text fill="#424750" font-family="Inter" font-size="8" text-anchor="start" x="175" y="55">准时</text>
+<text fill="#424750" font-family="Inter" font-size="8" text-anchor="start" x="175" y="145">提前</text>
+<text fill="#424750" font-family="Inter" font-size="8" text-anchor="middle" x="100" y="192">延迟控制</text>
+<text fill="#424750" font-family="Inter" font-size="8" text-anchor="end" x="25" y="145">专注稳定</text>
+<text fill="#424750" font-family="Inter" font-size="8" text-anchor="end" x="25" y="55">复盘完整</text>
+</svg>
+</div>
+</div>
+<!-- Sub-metrics Grid (Spans full width) -->
+<div class="md:col-span-12 grid grid-cols-2 md:grid-cols-4 gap-gutter">
+<div class="bg-surface-container-lowest rounded-xl p-md shadow-[0_4px_12px_rgba(21,32,43,0.08)] border border-surface-mist flex flex-col gap-sm">
+<span class="text-on-surface-variant font-label-xs text-label-xs uppercase">完成率</span>
+<div class="flex items-end gap-2">
+<span class="font-metric-xl text-metric-xl text-on-surface">76%</span>
+<span class="text-success-pine text-xs flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_upward</span> 2%</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-md shadow-[0_4px_12px_rgba(21,32,43,0.08)] border border-surface-mist flex flex-col gap-sm">
+<span class="text-on-surface-variant font-label-xs text-label-xs uppercase">提前率</span>
+<div class="flex items-end gap-2">
+<span class="font-metric-xl text-metric-xl text-on-surface">18%</span>
+<span class="text-on-surface-variant text-xs flex items-center"><span class="material-symbols-outlined text-[14px]">horizontal_rule</span> 0%</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-md shadow-[0_4px_12px_rgba(21,32,43,0.08)] border border-surface-mist flex flex-col gap-sm">
+<span class="text-on-surface-variant font-label-xs text-label-xs uppercase">平均延迟</span>
+<div class="flex items-end gap-2">
+<span class="font-metric-xl text-metric-xl text-danger-restrained">1.2h</span>
+<span class="text-danger-restrained text-xs flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_upward</span> .4h</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-md shadow-[0_4px_12px_rgba(21,32,43,0.08)] border border-surface-mist flex flex-col gap-sm">
+<span class="text-on-surface-variant font-label-xs text-label-xs uppercase">专注时长</span>
+<div class="flex items-end gap-2">
+<span class="font-metric-xl text-metric-xl text-primary">14h</span>
+<span class="text-success-pine text-xs flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_upward</span> 3h</span>
+</div>
+</div>
+</div>
+<!-- Task Calendar / Status Grid (Spans 8 columns) -->
+<div class="md:col-span-8 bg-surface-container-lowest rounded-xl p-xl shadow-[0_4px_12px_rgba(21,32,43,0.08)] border border-surface-mist flex flex-col">
+<div class="flex items-center justify-between mb-md">
+<span class="font-title-sm text-title-sm text-on-surface">执行日历</span>
+<div class="flex gap-sm">
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-success-pine"></div><span class="text-[10px] text-on-surface-variant">按时</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-danger-restrained"></div><span class="text-[10px] text-on-surface-variant">逾期</span></div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-recovered-purple"></div><span class="text-[10px] text-on-surface-variant">补完成</span></div>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-xs mt-2">
+<!-- Weekdays -->
+<div class="text-center text-[10px] text-on-surface-variant">一</div>
+<div class="text-center text-[10px] text-on-surface-variant">二</div>
+<div class="text-center text-[10px] text-on-surface-variant">三</div>
+<div class="text-center text-[10px] text-on-surface-variant">四</div>
+<div class="text-center text-[10px] text-on-surface-variant">五</div>
+<div class="text-center text-[10px] text-on-surface-variant">六</div>
+<div class="text-center text-[10px] text-on-surface-variant">日</div>
+<!-- Days Grid (Mock data) -->
+<!-- Row 1 -->
+<div class="aspect-square bg-surface-mist rounded-sm"></div>
+<div class="aspect-square bg-surface-mist rounded-sm"></div>
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+<div class="aspect-square bg-danger-restrained/20 border border-danger-restrained/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-danger-restrained rounded-full"></div></div>
+<div class="aspect-square bg-recovered-purple/20 border border-recovered-purple/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-recovered-purple rounded-full"></div></div>
+<!-- Row 2 -->
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+<div class="aspect-square bg-danger-restrained/20 border border-danger-restrained/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-danger-restrained rounded-full"></div></div>
+<div class="aspect-square bg-recovered-purple/20 border border-recovered-purple/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-recovered-purple rounded-full"></div></div>
+<div class="aspect-square bg-success-pine/20 border border-success-pine/30 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-success-pine rounded-full"></div></div>
+</div>
+</div>
+<!-- Risk Tasks (Spans 4 columns) -->
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-xl shadow-[0_4px_12px_rgba(21,32,43,0.08)] border border-surface-mist flex flex-col">
+<div class="flex items-center justify-between mb-md pb-2 border-b border-mist-line">
+<span class="font-title-sm text-title-sm text-on-surface">风险任务</span>
+<span class="bg-error-container text-on-error-container px-2 py-0.5 rounded text-[10px] font-bold">进度落后</span>
+</div>
+<div class="flex flex-col gap-sm mt-2">
+<!-- Task Item -->
+<div class="flex items-center gap-md p-sm bg-surface-mist rounded border-l-4 border-danger-restrained">
+<span class="material-symbols-outlined text-danger-restrained text-[20px]">warning</span>
+<div class="flex flex-col flex-1">
+<span class="text-sm font-medium text-on-surface">Algorithm Structuring</span>
+<span class="text-[10px] text-on-surface-variant">已延期 2 天</span>
+</div>
+</div>
+<!-- Task Item -->
+<div class="flex items-center gap-md p-sm bg-surface-mist rounded border-l-4 border-warning-amber">
+<span class="material-symbols-outlined text-warning-amber text-[20px]">schedule</span>
+<div class="flex flex-col flex-1">
+<span class="text-sm font-medium text-on-surface">Read AI Ethics Paper</span>
+<span class="text-[10px] text-on-surface-variant">有风险 - 今晚截止</span>
+</div>
+</div>
+<!-- Task Item -->
+<div class="flex items-center gap-md p-sm bg-surface-mist rounded border-l-4 border-warning-amber opacity-80">
+<span class="material-symbols-outlined text-warning-amber text-[20px]">schedule</span>
+<div class="flex flex-col flex-1">
+<span class="text-sm font-medium text-on-surface">Weekly Reflection</span>
+<span class="text-[10px] text-on-surface-variant">有风险 - 缺少日志</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe bg-surface-glass dark:bg-surface-container-lowest/80 backdrop-blur-lg border-t border-mist-line dark:border-outline-variant shadow-sm rounded-t-xl h-16">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline flex-1 py-2 transition-transform active:scale-95 active:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">timer</span>
+<span class="font-label-xs text-label-xs mt-1">专注</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline flex-1 py-2 transition-transform active:scale-95 active:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">play_arrow</span>
+<span class="font-label-xs text-label-xs mt-1">今日</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline flex-1 py-2 transition-transform active:scale-95 active:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="font-label-xs text-label-xs mt-1">任务</span>
+</a>
+<!-- Active Tab -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim font-bold flex-1 py-2 transition-transform active:scale-95 active:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">insights</span>
+<span class="font-label-xs text-label-xs mt-1">数据</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline flex-1 py-2 transition-transform active:scale-95 active:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-label-xs text-label-xs mt-1">历程</span>
+</a>
+</nav>
+<!-- Support for safe area on iOS -->
+<style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</body></html>
