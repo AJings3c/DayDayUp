@@ -81,6 +81,35 @@ enum TaskEventType: String, CaseIterable, Identifiable {
     }
 }
 
+enum TaskDeadlinePolicy {
+    static let minimumLeadSeconds: TimeInterval = 60
+
+    static func defaultDeadline(now: Date = .now, calendar: Calendar = .current) -> Date {
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(24 * 60 * 60)
+        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow)
+            ?? now.addingTimeInterval(24 * 60 * 60)
+    }
+
+    static func minimumDeadline(for task: LearningTask?, now: Date = .now) -> Date {
+        if let task, task.completedAt != nil {
+            return task.plannedAt
+        }
+        if let task {
+            guard task.deadline >= task.plannedAt else {
+                return now.addingTimeInterval(minimumLeadSeconds)
+            }
+            if task.deadline < now.addingTimeInterval(minimumLeadSeconds) {
+                return task.deadline
+            }
+        }
+        return now.addingTimeInterval(minimumLeadSeconds)
+    }
+
+    static func normalizedDeadline(_ deadline: Date, for task: LearningTask?, now: Date = .now) -> Date {
+        max(deadline, minimumDeadline(for: task, now: now))
+    }
+}
+
 enum AchievementKind: String, CaseIterable, Identifiable {
     case firstTaskCompleted
     case firstOnTimeClosure
@@ -234,6 +263,14 @@ final class LearningTask {
     var startDelayDays: Int {
         guard let startedAt else { return 0 }
         return Calendar.current.dateComponents([.day], from: plannedAt, to: startedAt).day ?? 0
+    }
+
+    @discardableResult
+    func repairImpossibleTimeline(now: Date = .now) -> Bool {
+        guard completedAt == nil, deadline < plannedAt else { return false }
+        deadline = TaskDeadlinePolicy.defaultDeadline(now: now)
+        updatedAt = now
+        return true
     }
 }
 

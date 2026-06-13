@@ -138,10 +138,11 @@ struct TaskEditorSheet: View {
         self.task = task
         self.onSave = onSave
         let draft = TaskDraft(task: task)
+        let normalizedDeadline = TaskDeadlinePolicy.normalizedDeadline(draft.deadline, for: task)
         _name = State(initialValue: draft.name)
         _details = State(initialValue: draft.details)
         _direction = State(initialValue: draft.direction)
-        _deadline = State(initialValue: draft.deadline)
+        _deadline = State(initialValue: normalizedDeadline)
         _estimatedMinutes = State(initialValue: draft.estimatedMinutes)
         _progress = State(initialValue: draft.progress)
         _completionCriteria = State(initialValue: draft.completionCriteria)
@@ -157,7 +158,7 @@ struct TaskEditorSheet: View {
                         .accessibilityLabel("任务名称")
                     TextField("学习方向", text: $direction)
                         .accessibilityLabel("学习方向")
-                    DeadlinePicker(deadline: $deadline)
+                    DeadlinePicker(deadline: $deadline, minimumDeadline: minimumDeadline)
                     Stepper(value: $estimatedMinutes, in: 15...1440, step: 15) {
                         Text("预计时长 \(estimatedMinutes) 分钟")
                     }
@@ -195,7 +196,7 @@ struct TaskEditorSheet: View {
                         draft.name = name
                         draft.details = details
                         draft.direction = direction
-                        draft.deadline = deadline
+                        draft.deadline = TaskDeadlinePolicy.normalizedDeadline(deadline, for: task)
                         draft.estimatedMinutes = estimatedMinutes
                         draft.progress = progress
                         draft.completionCriteria = completionCriteria
@@ -203,16 +204,26 @@ struct TaskEditorSheet: View {
                         draft.notes = notes
                         onSave(draft)
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!canSave)
                     .keyboardShortcut(.defaultAction)
                 }
             }
         }
     }
+
+    private var minimumDeadline: Date {
+        TaskDeadlinePolicy.minimumDeadline(for: task)
+    }
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && deadline >= minimumDeadline
+    }
 }
 
 struct DeadlinePicker: View {
     @Binding var deadline: Date
+    let minimumDeadline: Date
 
     private var hourBinding: Binding<Int> {
         Binding(
@@ -238,7 +249,7 @@ struct DeadlinePicker: View {
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(DayColor.text)
 
-            DatePicker("截止日期", selection: $deadline, displayedComponents: [.date])
+            DatePicker("截止日期", selection: clampedDeadlineBinding, in: minimumDeadline..., displayedComponents: [.date])
                 .datePickerStyle(.graphical)
                 .labelsHidden()
                 .frame(maxWidth: .infinity, minHeight: 226, alignment: .leading)
@@ -261,22 +272,36 @@ struct DeadlinePicker: View {
                     .font(.system(.callout, design: .monospaced).weight(.semibold))
                     .foregroundStyle(DayColor.primary)
             }
+
+            if deadline < minimumDeadline {
+                Label("截止时间不能早于当前时间。", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DayColor.danger)
+            }
         }
         .padding(14)
         .dayPanel(cornerRadius: 12)
         .accessibilityElement(children: .contain)
     }
 
+    private var clampedDeadlineBinding: Binding<Date> {
+        Binding(
+            get: { max(deadline, minimumDeadline) },
+            set: { deadline = max($0, minimumDeadline) }
+        )
+    }
+
     private func setTime(hour: Int, minute: Int) {
         let calendar = Calendar.current
         let clampedHour = min(max(hour, 0), 23)
         let clampedMinute = min(max(minute, 0), 59)
-        deadline = calendar.date(
+        let candidate = calendar.date(
             bySettingHour: clampedHour,
             minute: clampedMinute,
             second: 0,
             of: deadline
         ) ?? deadline
+        deadline = max(candidate, minimumDeadline)
     }
 }
 

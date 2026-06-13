@@ -33,6 +33,47 @@ struct DayDayUpTests {
         #expect(recovered.delayedDays == 1)
     }
 
+    @Test("task deadline policy prevents fresh tasks from starting overdue")
+    func taskDeadlinePolicyRules() {
+        let now = date(2026, 6, 13, 10, 0)
+        let yesterday = date(2026, 6, 12, 23, 59)
+        let overdueTask = LearningTask(
+            name: "任务名称",
+            details: "",
+            direction: "",
+            plannedAt: date(2026, 6, 10, 9, 0),
+            deadline: yesterday
+        )
+        let normalized = TaskDeadlinePolicy.normalizedDeadline(yesterday, for: nil, now: now)
+        let preservedOverdue = TaskDeadlinePolicy.normalizedDeadline(yesterday, for: overdueTask, now: now)
+        let defaultDeadline = TaskDeadlinePolicy.defaultDeadline(now: now)
+
+        #expect(normalized > now)
+        #expect(normalized == TaskDeadlinePolicy.minimumDeadline(for: nil, now: now))
+        #expect(preservedOverdue == yesterday)
+        #expect(defaultDeadline > now)
+        #expect(calendar.component(.hour, from: defaultDeadline) == 23)
+        #expect(calendar.component(.minute, from: defaultDeadline) == 59)
+    }
+
+    @Test("task repairs impossible deadline before planned date")
+    func taskImpossibleTimelineRepairRules() {
+        let now = date(2026, 6, 13, 10, 0)
+        let task = LearningTask(
+            name: "任务名称",
+            details: "",
+            direction: "",
+            plannedAt: now,
+            deadline: date(2026, 6, 11, 23, 59)
+        )
+
+        let repaired = task.repairImpossibleTimeline(now: now)
+
+        #expect(repaired)
+        #expect(task.deadline >= task.plannedAt)
+        #expect(task.deadline > now)
+    }
+
     @Test("metric calculator exposes score inputs")
     func metricCalculatorRules() {
         let now = date(2026, 6, 9, 12, 0)

@@ -74,14 +74,10 @@ struct TaskDraft {
     var notes: String
 
     init(task: LearningTask? = nil) {
-        let calendar = Calendar.current
-        let defaultDeadline = calendar.date(bySettingHour: 23, minute: 59, second: 0, of: .now.addingTimeInterval(24 * 60 * 60))
-            ?? .now.addingTimeInterval(24 * 60 * 60)
-
         name = task?.name ?? ""
         details = task?.details ?? ""
         direction = task?.direction ?? ""
-        deadline = task?.deadline ?? defaultDeadline
+        deadline = task?.deadline ?? TaskDeadlinePolicy.defaultDeadline()
         estimatedMinutes = task?.estimatedMinutes ?? 60
         progress = task?.progress ?? 0
         completionCriteria = task?.completionCriteria ?? ""
@@ -231,6 +227,7 @@ struct AppBootstrapView: View {
         let settings = ensureAppSettings()
         let focusState = ensureActiveFocusState()
         normalize(settings)
+        repairImpossibleTaskTimelines()
         try? modelContext.save()
         restoreActiveFocus(from: focusState)
         let selectableTasks = removeLegacyPlaceholderTasksIfPresent()
@@ -369,6 +366,12 @@ struct AppBootstrapView: View {
         settings.resolvedGlassTransparency = settings.resolvedGlassTransparency
     }
 
+    private func repairImpossibleTaskTimelines(now: Date = .now) {
+        for task in tasks where task.repairImpossibleTimeline(now: now) {
+            replaceDeadlineEvent(for: task)
+        }
+    }
+
     private func exportBackup(to url: URL) -> String {
         let settings = ensureAppSettings()
         do {
@@ -412,6 +415,7 @@ struct AppBootstrapView: View {
                 settings: settings,
                 focusState: focusState
             )
+            repairImpossibleTaskTimelines()
             try? modelContext.save()
             restoreActiveFocus(from: focusState)
             ReminderScheduler.rescheduleAll(tasks: tasks, settings: settings)
@@ -494,14 +498,16 @@ struct AppBootstrapView: View {
         let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
+        let now = Date.now
         let clampedProgress = min(max(draft.progress, 0), 1)
         let clampedEstimatedMinutes = min(max(draft.estimatedMinutes, 15), 1440)
+        let normalizedDeadline = TaskDeadlinePolicy.normalizedDeadline(draft.deadline, for: editingTask, now: now)
 
         if let editingTask {
             editingTask.name = trimmedName
             editingTask.details = draft.details.trimmingCharacters(in: .whitespacesAndNewlines)
             editingTask.direction = draft.direction.trimmingCharacters(in: .whitespacesAndNewlines)
-            editingTask.deadline = draft.deadline
+            editingTask.deadline = normalizedDeadline
             editingTask.estimatedMinutes = clampedEstimatedMinutes
             editingTask.progress = editingTask.completedAt == nil ? clampedProgress : 1
             editingTask.completionCriteria = draft.completionCriteria.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -516,7 +522,7 @@ struct AppBootstrapView: View {
                 name: trimmedName,
                 details: draft.details.trimmingCharacters(in: .whitespacesAndNewlines),
                 direction: draft.direction.trimmingCharacters(in: .whitespacesAndNewlines),
-                deadline: draft.deadline,
+                deadline: normalizedDeadline,
                 estimatedMinutes: clampedEstimatedMinutes,
                 progress: clampedProgress,
                 completionCriteria: draft.completionCriteria.trimmingCharacters(in: .whitespacesAndNewlines),
