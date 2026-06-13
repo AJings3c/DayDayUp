@@ -52,8 +52,25 @@ struct TaskManagementView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 660)
+                .frame(minWidth: 520, idealWidth: 640, maxWidth: 660)
                 .accessibilityLabel("任务筛选")
+
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(DayColor.muted)
+                        .accessibilityHidden(true)
+                    TextField("搜索任务", text: $searchText)
+                        .textFieldStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .frame(width: 260, height: 30)
+                .background(DayColor.workbench.opacity(0.72), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(DayColor.border.opacity(0.68), lineWidth: 1)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("搜索任务")
 
                 Spacer()
 
@@ -71,17 +88,30 @@ struct TaskManagementView: View {
                 )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(filteredTasks, id: \.id, selection: $selectedTaskID) { task in
-                    TaskManagementRow(
-                        task: task,
-                        onEdit: { onEditTask(task) },
-                        onBeginFocus: { onBeginFocus(task) },
-                        onMarkComplete: { onMarkComplete(task) }
-                    )
-                    .tag(task.id)
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(filteredTasks, id: \.id) { task in
+                            TaskManagementRow(
+                                task: task,
+                                isSelected: selectedTaskID == task.id,
+                                onSelect: { selectedTaskID = task.id },
+                                onEdit: { onEditTask(task) },
+                                onBeginFocus: { onBeginFocus(task) },
+                                onMarkComplete: { onMarkComplete(task) }
+                            )
+                        }
+                    }
+                    .padding(10)
                 }
-                .listStyle(.inset)
-                .searchable(text: $searchText, prompt: "搜索任务名称、内容或方向")
+                .scrollContentBackground(.hidden)
+                .background(DayColor.workbench.opacity(0.42), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(DayColor.border.opacity(0.58), lineWidth: 1)
+                }
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             }
         }
         .padding(28)
@@ -385,6 +415,8 @@ struct TaskDetailInspector: View {
 
 struct TaskManagementRow: View {
     let task: LearningTask
+    let isSelected: Bool
+    let onSelect: () -> Void
     let onEdit: () -> Void
     let onBeginFocus: () -> Void
     let onMarkComplete: () -> Void
@@ -421,9 +453,25 @@ struct TaskManagementRow: View {
             Button("完成", action: onMarkComplete)
                 .disabled(task.completedAt != nil)
         }
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 86, alignment: .leading)
+        .background(rowBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isSelected ? DayColor.primary.opacity(0.56) : Color.clear, lineWidth: 1)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .onTapGesture(perform: onSelect)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(task.name)，\(task.status().accessibilityText)，完成度 \(task.progress.percentText)")
+    }
+
+    private var rowBackground: Color {
+        if isSelected {
+            return DayColor.selected.opacity(0.82)
+        }
+        return DayColor.workbench.opacity(0.64)
     }
 }
 

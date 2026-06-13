@@ -2,6 +2,9 @@ import AppKit
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 struct SettingsBackupView: View {
     let settings: AppSettings?
@@ -67,6 +70,7 @@ struct SettingsBackupContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             appearancePanel
+            widgetPanel
             reminderPanel
             backupPanel
             dataSummaryPanel
@@ -175,6 +179,51 @@ struct SettingsBackupContent: View {
                 } label: {
                     Label("请求通知权限", systemImage: "bell.and.waves.left.and.right")
                 }
+            }
+        }
+        .padding(20)
+        .dayPanel(cornerRadius: 14)
+    }
+
+    private var widgetPanel: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center) {
+                SectionHeader(title: "桌面小组件", systemImage: "rectangle.3.group")
+                Spacer()
+                Text("A / B / C")
+                    .font(.system(.caption, design: .monospaced).weight(.semibold))
+                    .foregroundStyle(DayColor.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(DayColor.primary.opacity(0.10), in: Capsule())
+            }
+
+            HStack(spacing: 10) {
+                WidgetSettingChip(title: "下一颗松果", subtitle: "最近任务", systemImage: "timer")
+                WidgetSettingChip(title: "今日篮子", subtitle: "今日执行", systemImage: "basket")
+                WidgetSettingChip(title: "节奏仪表", subtitle: "数据评分", systemImage: "gauge.with.dots.needle.67percent")
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    refreshWidgets()
+                } label: {
+                    Label("刷新小组件", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    openDesktopSettings()
+                } label: {
+                    Label("打开桌面设置", systemImage: "macwindow.and.cursorarrow")
+                }
+                .buttonStyle(.bordered)
+
+                Spacer()
+
+                Text("从桌面右键菜单添加。")
+                    .font(.caption)
+                    .foregroundStyle(DayColor.muted)
             }
         }
         .padding(20)
@@ -319,5 +368,63 @@ struct SettingsBackupContent: View {
         statusMessage = onImportBackup(pendingImportURL)
         pendingImportPreview = ""
         self.pendingImportURL = nil
+    }
+
+    private func refreshWidgets() {
+        WidgetSnapshotWriter.write(
+            tasks: tasks,
+            sessions: sessions,
+            focusState: focusState,
+            glassTransparency: settings.resolvedGlassTransparency
+        )
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
+        statusMessage = "小组件数据已刷新。"
+    }
+
+    private func openDesktopSettings() {
+        let candidates = [
+            "x-apple.systempreferences:com.apple.Desktop-Settings.extension",
+            "x-apple.systempreferences:com.apple.preference.desktopscreeneffect"
+        ]
+        if let url = candidates.compactMap(URL.init(string:)).first(where: { NSWorkspace.shared.open($0) }) {
+            statusMessage = "已打开系统设置：\(url.absoluteString)"
+        } else if let settingsURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systempreferences") {
+            NSWorkspace.shared.open(settingsURL)
+            statusMessage = "已打开系统设置。"
+        } else {
+            statusMessage = "打开系统设置失败。"
+        }
+    }
+}
+
+private struct WidgetSettingChip: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(DayColor.primary)
+                .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(DayColor.text)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(DayColor.muted)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+        .dayPanel(cornerRadius: 10)
     }
 }
