@@ -9,7 +9,7 @@ enum WidgetTaskStatus: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .active: "进行中"
+        case .active: "待执行"
         case .warning: "接近截止"
         case .overdue: "逾期"
         case .completed: "已完成"

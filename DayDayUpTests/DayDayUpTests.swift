@@ -31,6 +31,7 @@ struct DayDayUpTests {
         #expect(recovered.status(now: now) == .recovered)
         #expect(recovered.isClosedLoop == true)
         #expect(recovered.delayedDays == 1)
+        #expect(TaskStatus.active.title == "待执行")
     }
 
     @Test("task deadline policy prevents fresh tasks from starting overdue")

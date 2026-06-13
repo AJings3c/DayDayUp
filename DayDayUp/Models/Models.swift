@@ -13,7 +13,7 @@ enum TaskStatus: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .active: "进行中"
+        case .active: "待执行"
         case .warning: "接近截止"
         case .overdue: "逾期未完成"
         case .completed: "按时完成"
@@ -33,7 +33,7 @@ enum TaskStatus: String, CaseIterable, Identifiable {
 
     var accessibilityText: String {
         switch self {
-        case .active: "普通进行中"
+        case .active: "待执行，尚未逾期"
         case .warning: "接近截止，还没有逾期"
         case .overdue: "红色，逾期未完成"
         case .completed: "绿色，按时或提前完成"
