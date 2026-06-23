@@ -27,3 +27,7 @@ Package.resolved
 # Local editor state
 .vscode/
 .idea/
+
+# Local development references
+docs/
+design/

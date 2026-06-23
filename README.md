@@ -81,8 +81,6 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 - `DayDayUp/Views`：启动倒计时、今日执行、任务管理、评分、历程、设置和共享组件。
 - `DayDayUpWidgetsExtension`：macOS Widget 扩展。
 - `DayDayUpTests`：核心规则和数据流测试。
-- `docs`：产品定位、交互设计规范、Logo 与小松鼠 IP 简报。
-- `design`：Stitch 视觉参考和生成图源，不参与 App 运行时资源加载。
 
 ## 产品原则
 
@@ -99,9 +97,3 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 - 社交打卡、排行榜、群组监督。
 - 复杂项目管理，比如甘特图、多人协作、权限管理。
 - 过度游戏化，比如大量徽章、积分、等级和动画奖励。
-
-## 文档
-
-- [产品说明](docs/PRODUCT.md)
-- [设计规范](docs/DESIGN.md)
-- [Logo 与小松鼠 IP 简报](docs/LOGO_IP_BRIEF.md)
