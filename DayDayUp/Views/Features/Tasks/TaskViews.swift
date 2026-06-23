@@ -725,19 +725,27 @@ private struct TaskClosureSummaryPanel: View {
     }
 
     private var summaryText: String {
-        let criteria = task.completionCriteria.nilIfBlank ?? "尚未填写完成标准"
         switch status {
         case .completed:
-            return "完成时间：\(task.completedAt?.formattedDateTime() ?? "未知")。完成标准：\(criteria)。"
+            return "完成时间：\(task.completedAt?.formattedDateTime() ?? "未知")。完成标准：\(criteriaSentence)"
         case .recovered:
             return "原 deadline：\(task.deadline.formattedDateTime())，延期 \(task.delayedDays(now: now)) 天后补上。补救记录：\(task.recoveryNote.nilIfBlank ?? "暂无")。"
         case .overdue:
-            return "deadline 已过，任务仍未完成。建议先记录卡住原因，再补救闭环。完成标准：\(criteria)。"
+            return "deadline 已过，任务仍未完成。建议先记录卡住原因，再补救闭环。完成标准：\(criteriaSentence)"
         case .warning:
-            return "deadline 已经接近，建议立即开始一次专注。完成标准：\(criteria)。"
+            return "deadline 已经接近，建议立即开始一次专注。完成标准：\(criteriaSentence)"
         case .active:
-            return "任务尚未逾期，可以继续推进。完成标准：\(criteria)。"
+            return "任务尚未逾期，可以继续推进。完成标准：\(criteriaSentence)"
         }
+    }
+
+    private var criteriaSentence: String {
+        let criteria = task.completionCriteria.nilIfBlank ?? "尚未填写完成标准"
+        let sentenceEndings = CharacterSet(charactersIn: "。.!！?？")
+        if criteria.unicodeScalars.last.map(sentenceEndings.contains) == true {
+            return criteria
+        }
+        return "\(criteria)。"
     }
 }
 
