@@ -20,6 +20,8 @@ struct TodayExecutionView: View {
     let onFinishFocus: (String) -> Void
     let onUpdateProgress: (LearningTask, Double, String) -> Void
     let onMarkComplete: (LearningTask) -> Void
+    let onNewTask: () -> Void
+    let onCreateSampleTask: () -> Void
 
     private var incompleteTasks: [LearningTask] {
         tasks.filter { $0.completedAt == nil }
@@ -55,10 +57,14 @@ struct TodayExecutionView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeader(title: "执行队列", systemImage: "list.bullet.rectangle")
                     if incompleteTasks.isEmpty {
-                        EmptyStateView(
-                            title: tasks.isEmpty ? "还没有任务" : "任务完成啦，开始干饭！",
-                            subtitle: tasks.isEmpty ? "先新建一个任务，再开始记录学习时段。" : "今天没有待完成任务，小松鼠已经抱着松果收工。"
-                        )
+                        if tasks.isEmpty {
+                            FirstTaskEmptyState(onNewTask: onNewTask, onCreateSampleTask: onCreateSampleTask)
+                        } else {
+                            EmptyStateView(
+                                title: "任务完成啦，开始干饭！",
+                                subtitle: "今天没有待完成任务，小松鼠已经抱着松果收工。"
+                            )
+                        }
                     } else {
                         LazyVStack(spacing: 10) {
                             ForEach(incompleteTasks, id: \.id) { task in
@@ -86,6 +92,31 @@ struct TodayExecutionView: View {
         return sessions
             .filter { $0.startedAt.dayKey() == today }
             .reduce(0) { $0 + $1.durationMinutes }
+    }
+}
+
+private struct FirstTaskEmptyState: View {
+    let onNewTask: () -> Void
+    let onCreateSampleTask: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            EmptyStateView(
+                title: "从第一颗松果开始",
+                subtitle: "创建一个有 deadline 和完成标准的学习任务，DayDayUp 会帮你监督执行、提醒和复盘。"
+            )
+            HStack(spacing: 10) {
+                Button(action: onNewTask) {
+                    Label("创建第一个学习任务", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button(action: onCreateSampleTask) {
+                    Label("用示例任务体验", systemImage: "sparkles")
+                }
+                .buttonStyle(.bordered)
+            }
+        }
     }
 }
 

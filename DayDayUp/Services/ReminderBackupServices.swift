@@ -2,6 +2,65 @@ import Foundation
 import SwiftData
 import UserNotifications
 
+struct ReminderNotificationRoute: Equatable {
+    var taskID: UUID?
+    var eventType: TaskEventType?
+    var deadline: Date?
+}
+
+enum ReminderNotificationPayloadPolicy {
+    static let taskIDKey = "taskID"
+    static let eventTypeKey = "eventType"
+    static let deadlineKey = "deadline"
+
+    static func userInfo(task: LearningTask, eventType: TaskEventType) -> [AnyHashable: Any] {
+        [
+            taskIDKey: task.id.uuidString,
+            eventTypeKey: eventType.rawValue,
+            deadlineKey: task.deadline.timeIntervalSince1970
+        ]
+    }
+
+    static func route(from userInfo: [AnyHashable: Any]) -> ReminderNotificationRoute? {
+        let eventType = (userInfo[eventTypeKey] as? String).flatMap(TaskEventType.init(rawValue:))
+        let taskID = (userInfo[taskIDKey] as? String).flatMap(UUID.init(uuidString:))
+        let deadline = (userInfo[deadlineKey] as? TimeInterval).map(Date.init(timeIntervalSince1970:))
+
+        guard eventType == .leadReminder || eventType == .overdueReminder || taskID != nil else {
+            return nil
+        }
+
+        return ReminderNotificationRoute(taskID: taskID, eventType: eventType, deadline: deadline)
+    }
+}
+
+final class DayDayUpNotificationRouter: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+    static let shared = DayDayUpNotificationRouter()
+
+    func register() {
+        UNUserNotificationCenter.current().delegate = self
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        guard let route = ReminderNotificationPayloadPolicy.route(from: response.notification.request.content.userInfo) else {
+            return
+        }
+        await MainActor.run {
+            NotificationCenter.default.post(name: .dayDayUpOpenTaskFromNotification, object: route)
+        }
+    }
+}
+
 enum ReminderScheduler {
     static let dailyReminderID = "daydayup.daily-reminder"
 
@@ -50,7 +109,8 @@ enum ReminderScheduler {
                 id: leadReminderID(for: task.id),
                 date: leadDate,
                 title: "DayDayUp 任务快到截止时间",
-                body: "\(task.name) 截止时间：\(task.deadline.formattedDateTime())，还差一颗松果，先收好再开饭。"
+                body: "\(task.name) 截止时间：\(task.deadline.formattedDateTime())，还差一颗松果，先收好再开饭。",
+                userInfo: ReminderNotificationPayloadPolicy.userInfo(task: task, eventType: .leadReminder)
             )
         }
 
@@ -59,7 +119,8 @@ enum ReminderScheduler {
                 id: overdueReminderID(for: task.id),
                 date: overdueDate,
                 title: "DayDayUp 任务已经逾期",
-                body: "\(task.name) 截止时间：\(task.deadline.formattedDateTime())，还没有闭环，先记录卡住原因，再补上。"
+                body: "\(task.name) 截止时间：\(task.deadline.formattedDateTime())，还没有闭环，先记录卡住原因，再补上。",
+                userInfo: ReminderNotificationPayloadPolicy.userInfo(task: task, eventType: .overdueReminder)
             )
         }
     }
@@ -103,11 +164,18 @@ enum ReminderScheduler {
         UNUserNotificationCenter.current().add(request)
     }
 
-    private static func addNotification(id: String, date: Date, title: String, body: String) {
+    private static func addNotification(
+        id: String,
+        date: Date,
+        title: String,
+        body: String,
+        userInfo: [AnyHashable: Any] = [:]
+    ) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        content.userInfo = userInfo
 
         let components = notificationDateComponents(for: date)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)

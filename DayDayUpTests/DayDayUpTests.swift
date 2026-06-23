@@ -252,6 +252,44 @@ struct DayDayUpTests {
         #expect(components.second == 17)
     }
 
+    @Test("reminder notification payload routes to task detail")
+    func reminderNotificationPayloadRules() {
+        let deadline = date(2026, 6, 18, 22, 40, 17)
+        let task = LearningTask(
+            name: "通知跳转任务",
+            details: "",
+            direction: "",
+            deadline: deadline
+        )
+
+        let userInfo = ReminderNotificationPayloadPolicy.userInfo(task: task, eventType: .leadReminder)
+        let route = ReminderNotificationPayloadPolicy.route(from: userInfo)
+
+        #expect(route?.taskID == task.id)
+        #expect(route?.eventType == .leadReminder)
+        #expect(route?.deadline == deadline)
+    }
+
+    @Test("reminder notification payload tolerates missing task id")
+    func reminderNotificationMissingTaskIDRules() {
+        let userInfo: [AnyHashable: Any] = [
+            ReminderNotificationPayloadPolicy.eventTypeKey: TaskEventType.overdueReminder.rawValue,
+            ReminderNotificationPayloadPolicy.deadlineKey: date(2026, 6, 18, 22, 40).timeIntervalSince1970
+        ]
+
+        let route = ReminderNotificationPayloadPolicy.route(from: userInfo)
+
+        #expect(route != nil)
+        #expect(route?.taskID == nil)
+        #expect(route?.eventType == .overdueReminder)
+    }
+
+    @Test("unrelated notification payload is ignored")
+    func unrelatedNotificationPayloadRules() {
+        #expect(ReminderNotificationPayloadPolicy.route(from: [:]) == nil)
+        #expect(ReminderNotificationPayloadPolicy.route(from: ["eventType": "completed"]) == nil)
+    }
+
     @Test("task repairs impossible deadline before planned date")
     func taskImpossibleTimelineRepairRules() {
         let now = date(2026, 6, 13, 10, 0)

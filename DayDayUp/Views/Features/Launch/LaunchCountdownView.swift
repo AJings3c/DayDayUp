@@ -11,6 +11,7 @@ struct LaunchCountdownView: View {
     let onStartToday: () -> Void
     let onTaskDetail: () -> Void
     let onNewTask: () -> Void
+    let onCreateSampleTask: () -> Void
     let onBeginFocus: (LearningTask) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -136,13 +137,22 @@ struct LaunchCountdownView: View {
                     .foregroundStyle(DayColor.muted)
                 Text("没有待监督的任务。")
                     .foregroundStyle(DayColor.muted)
-                Button(action: onNewTask) {
-                    Label("新建任务", systemImage: "plus")
-                        .frame(maxWidth: .infinity)
+                VStack(spacing: 10) {
+                    Button(action: onNewTask) {
+                        Label("创建第一个学习任务", systemImage: "plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .keyboardShortcut("n", modifiers: [.command])
+
+                    Button(action: onCreateSampleTask) {
+                        Label("用示例任务体验", systemImage: "sparkles")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .keyboardShortcut("n", modifiers: [.command])
             }
         }
         .frame(width: 420, alignment: .leading)

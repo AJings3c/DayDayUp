@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - up-update
+      - main
+  pull_request:
+    branches:
+      - up-update
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: |
+          xcodebuild -version
+          xcode-select -p
+
+      - name: List schemes
+        run: |
+          xcodebuild -list -project DayDayUp.xcodeproj
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -project DayDayUp.xcodeproj \
+            -scheme DayDayUp \
+            -destination 'platform=macOS'

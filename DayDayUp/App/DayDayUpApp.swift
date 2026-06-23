@@ -9,6 +9,7 @@ struct DayDayUpApp: App {
     init() {
         do {
             modelContainer = try DayDayUpModelStore.makeContainer()
+            DayDayUpNotificationRouter.shared.register()
         } catch {
             fatalError("Unable to create DayDayUp model container: \(error)")
         }
@@ -169,4 +170,5 @@ private enum ApplicationIconController {
 extension Notification.Name {
     static let dayDayUpNewTask = Notification.Name("DayDayUpNewTask")
     static let dayDayUpStartTask = Notification.Name("DayDayUpStartTask")
+    static let dayDayUpOpenTaskFromNotification = Notification.Name("DayDayUpOpenTaskFromNotification")
 }

@@ -384,6 +384,7 @@ struct RelatedAchievementsPanel: View {
 
 struct EmptyInspectorView: View {
     let onNewTask: () -> Void
+    let onCreateSampleTask: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
@@ -394,9 +395,14 @@ struct EmptyInspectorView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(DayColor.muted)
             Button(action: onNewTask) {
-                Label("新建任务", systemImage: "plus")
+                Label("创建第一个学习任务", systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
+
+            Button(action: onCreateSampleTask) {
+                Label("用示例任务体验", systemImage: "sparkles")
+            }
+            .buttonStyle(.bordered)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

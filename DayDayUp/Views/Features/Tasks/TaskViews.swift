@@ -608,6 +608,10 @@ struct TaskDetailInspector: View {
                 }
 
                 InspectorFactGrid(task: task, sessions: sessions, now: now)
+                TaskClosureSummaryPanel(task: task, status: status, now: now)
+                if task.completedAt != nil && task.reviewNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ReviewPromptPanel()
+                }
                 RelatedAchievementsPanel(achievements: achievements)
 
                 InspectorTextBlock(title: "任务内容", text: task.details.nilIfBlank ?? "未填写")
@@ -682,6 +686,70 @@ struct TaskDetailInspector: View {
             return url
         }
         return URL(string: "https://\(link)")
+    }
+}
+
+private struct TaskClosureSummaryPanel: View {
+    let task: LearningTask
+    let status: TaskStatus
+    let now: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "闭环诊断", systemImage: "checklist.checked")
+            HStack(alignment: .top, spacing: 10) {
+                StatusBadge(status: status)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(summaryTitle)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(DayColor.text)
+                    Text(summaryText)
+                        .font(.callout)
+                        .foregroundStyle(DayColor.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(14)
+        .dayPanel(cornerRadius: 12)
+    }
+
+    private var summaryTitle: String {
+        switch status {
+        case .completed: "已经按时闭环"
+        case .recovered: "已经补完成"
+        case .overdue: "逾期未闭环"
+        case .warning: "接近截止"
+        case .active: "进行中"
+        }
+    }
+
+    private var summaryText: String {
+        let criteria = task.completionCriteria.nilIfBlank ?? "尚未填写完成标准"
+        switch status {
+        case .completed:
+            return "完成时间：\(task.completedAt?.formattedDateTime() ?? "未知")。完成标准：\(criteria)。"
+        case .recovered:
+            return "原 deadline：\(task.deadline.formattedDateTime())，延期 \(task.delayedDays(now: now)) 天后补上。补救记录：\(task.recoveryNote.nilIfBlank ?? "暂无")。"
+        case .overdue:
+            return "deadline 已过，任务仍未完成。建议先记录卡住原因，再补救闭环。完成标准：\(criteria)。"
+        case .warning:
+            return "deadline 已经接近，建议立即开始一次专注。完成标准：\(criteria)。"
+        case .active:
+            return "任务尚未逾期，可以继续推进。完成标准：\(criteria)。"
+        }
+    }
+}
+
+private struct ReviewPromptPanel: View {
+    var body: some View {
+        Label("任务已经完成。写一句复盘，记录这次学习最有价值的收获或下次改进点。", systemImage: "text.bubble.fill")
+            .font(.callout.weight(.medium))
+            .foregroundStyle(DayColor.recovered)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DayColor.recovered.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .accessibilityElement(children: .combine)
     }
 }
 

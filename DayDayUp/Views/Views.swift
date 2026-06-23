@@ -165,7 +165,8 @@ struct AppBootstrapView: View {
             onRequestNotifications: requestNotificationAuthorization,
             onExportBackup: exportBackup,
             onPreviewImport: previewImport,
-            onImportBackup: importBackup
+            onImportBackup: importBackup,
+            onCreateSampleTask: createSampleTask
         )
         .environment(\.dayGlassTransparency, glassTransparency)
         .preferredColorScheme(appearanceMode.colorScheme)
@@ -243,6 +244,13 @@ struct AppBootstrapView: View {
                 return
             }
             beginFocus(task)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .dayDayUpOpenTaskFromNotification)) { notification in
+            guard let route = notification.object as? ReminderNotificationRoute else {
+                selectedSection = .today
+                return
+            }
+            openNotificationRoute(route)
         }
     }
 
@@ -554,6 +562,43 @@ struct AppBootstrapView: View {
         showingTaskEditor = true
     }
 
+    private func createSampleTask() {
+        guard tasks.isEmpty else {
+            selectedSection = .tasks
+            return
+        }
+
+        let now = Date.now
+        let task = LearningTask(
+            name: "阅读 RAG 入门资料并整理 3 条笔记",
+            details: "阅读一篇 RAG 入门资料，理解检索增强生成的基本流程，并记录 3 条可复用的学习笔记。",
+            direction: "RAG / 大模型应用开发",
+            deadline: DeadlineShortcutPolicy.evening(daysFromToday: 1, now: now),
+            estimatedMinutes: 90,
+            completionCriteria: "写下 3 条笔记，并能用自己的话说明检索、重排和生成三个环节。",
+            resourceLink: "https://github.com/langchain-ai/langchain",
+            notes: "示例任务，可随时编辑或删除。"
+        )
+        modelContext.insert(task)
+        modelContext.insert(TaskEvent(taskID: task.id, type: .planned, occurredAt: task.plannedAt, note: "制定示例学习计划"))
+        modelContext.insert(deadlineEvent(for: task))
+        ReminderScheduler.scheduleTaskReminders(for: task, settings: ensureAppSettings())
+        selectedTaskID = task.id
+        selectedSection = .tasks
+        try? modelContext.save()
+        writeWidgetSnapshot()
+    }
+
+    private func openNotificationRoute(_ route: ReminderNotificationRoute) {
+        guard let taskID = route.taskID,
+              tasks.contains(where: { $0.id == taskID }) else {
+            selectedSection = .today
+            return
+        }
+        selectedTaskID = taskID
+        selectedSection = .tasks
+    }
+
     private func openEditor(_ task: LearningTask) {
         editingTask = task
         selectedTaskID = task.id
@@ -762,6 +807,10 @@ struct AppBootstrapView: View {
         try? modelContext.save()
         writeWidgetSnapshot()
         evaluateAchievements(relatedTask: task, extraSessions: closedSession.map { [$0] } ?? [])
+        if task.reviewNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            selectedTaskID = task.id
+            selectedSection = .tasks
+        }
     }
 
     private func completionNote(recovered: Bool, note: String) -> String {
@@ -914,6 +963,7 @@ struct ShellView: View {
     let onExportBackup: (URL) -> String
     let onPreviewImport: (URL) -> String
     let onImportBackup: (URL) -> String
+    let onCreateSampleTask: () -> Void
 
     private var selectedTask: LearningTask? {
         selectedTaskID.flatMap { id in tasks.first(where: { $0.id == id }) }
@@ -962,6 +1012,7 @@ struct ShellView: View {
                                 selectedSection = .tasks
                             },
                             onNewTask: onNewTask,
+                            onCreateSampleTask: onCreateSampleTask,
                             onBeginFocus: onBeginFocus
                         )
                     case .today:
@@ -981,7 +1032,9 @@ struct ShellView: View {
                             onResumeFocus: onResumeFocus,
                             onFinishFocus: onFinishFocus,
                             onUpdateProgress: onUpdateProgress,
-                            onMarkComplete: onMarkComplete
+                            onMarkComplete: onMarkComplete,
+                            onNewTask: onNewTask,
+                            onCreateSampleTask: onCreateSampleTask
                         )
                     case .tasks:
                         TaskManagementView(
@@ -1049,7 +1102,7 @@ struct ShellView: View {
                         onDeleteTask: onDeleteTask
                     )
                 } else {
-                    EmptyInspectorView(onNewTask: onNewTask)
+                    EmptyInspectorView(onNewTask: onNewTask, onCreateSampleTask: onCreateSampleTask)
                 }
             }
             .frame(width: 360)
@@ -1064,7 +1117,7 @@ private struct NotificationFallbackBanner: View {
     let settings: AppSettings?
 
     var body: some View {
-        if let settings, shouldShow {
+        if shouldShow {
             HStack(spacing: 8) {
                 Image(systemName: "bell.slash.fill")
                     .foregroundStyle(tint)
