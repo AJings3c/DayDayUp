@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 
 struct TaskManagementView: View {
     let tasks: [LearningTask]
+    let now: Date
     @Binding var selectedTaskID: UUID?
     let onNewTask: () -> Void
     let onEditTask: (LearningTask) -> Void
@@ -19,12 +20,12 @@ struct TaskManagementView: View {
             .filter { task in
                 switch filter {
                 case .all: true
-                case .today: task.isRelevantToday()
+                case .today: task.isRelevantToday(now: now)
                 case .incomplete: task.completedAt == nil || !task.isClosedLoop
-                case .active: task.status() == .active || task.status() == .warning
-                case .overdue: task.status() == .overdue
-                case .completed: task.status() == .completed
-                case .recovered: task.status() == .recovered
+                case .active: task.status(now: now) == .active || task.status(now: now) == .warning
+                case .overdue: task.status(now: now) == .overdue
+                case .completed: task.status(now: now) == .completed
+                case .recovered: task.status(now: now) == .recovered
                 case .early: task.isEarlyCompleted
                 }
             }
@@ -38,7 +39,7 @@ struct TaskManagementView: View {
                     || task.resourceLink.localizedCaseInsensitiveContains(query)
                     || task.notes.localizedCaseInsensitiveContains(query)
             }
-            .sortedForExecution()
+            .sortedForExecution(now: now)
     }
 
     var body: some View {
@@ -94,6 +95,7 @@ struct TaskManagementView: View {
                             TaskManagementRow(
                                 task: task,
                                 isSelected: selectedTaskID == task.id,
+                                now: now,
                                 onSelect: { selectedTaskID = task.id },
                                 onEdit: { onEditTask(task) },
                                 onBeginFocus: { onBeginFocus(task) },
@@ -156,18 +158,25 @@ struct TaskEditorSheet: View {
                 Section("基础信息") {
                     TextField("任务名称", text: $name)
                         .accessibilityLabel("任务名称")
+                        .accessibilityIdentifier("task-editor-name")
                     TextField("学习方向", text: $direction)
                         .accessibilityLabel("学习方向")
+                        .accessibilityIdentifier("task-editor-direction")
                     DeadlinePicker(deadline: $deadline, minimumDeadline: minimumDeadline)
                     Stepper(value: $estimatedMinutes, in: 15...1440, step: 15) {
                         Text("预计时长 \(estimatedMinutes) 分钟")
                     }
+                    .accessibilityIdentifier("task-editor-estimated-minutes")
                 }
 
                 Section("任务内容") {
-                    DayTextEditor(text: $details, minHeight: 92, label: "任务内容")
+                    DayTextEditor(text: $details, minHeight: 92, label: "任务内容", accessibilityIdentifier: "task-editor-details")
                     TextField("完成标准", text: $completionCriteria, axis: .vertical)
+                        .accessibilityLabel("完成标准")
+                        .accessibilityIdentifier("task-editor-completion-criteria")
                     TextField("资料链接", text: $resourceLink)
+                        .accessibilityLabel("资料链接")
+                        .accessibilityIdentifier("task-editor-resource-link")
                 }
 
                 Section("当前完成度") {
@@ -181,7 +190,7 @@ struct TaskEditorSheet: View {
                 }
 
                 Section("备注") {
-                    DayTextEditor(text: $notes, minHeight: 70, label: "备注")
+                    DayTextEditor(text: $notes, minHeight: 70, label: "备注", accessibilityIdentifier: "task-editor-notes")
                 }
             }
             .formStyle(.grouped)
@@ -189,6 +198,7 @@ struct TaskEditorSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
+                        .accessibilityIdentifier("task-editor-cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(task == nil ? "创建任务" : "保存任务") {
@@ -206,6 +216,7 @@ struct TaskEditorSheet: View {
                     }
                     .disabled(!canSave)
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier(task == nil ? "task-editor-create" : "task-editor-save")
                 }
             }
         }
@@ -229,7 +240,11 @@ struct DeadlinePicker: View {
         Binding(
             get: { Calendar.current.component(.hour, from: deadline) },
             set: { hour in
-                setTime(hour: hour, minute: Calendar.current.component(.minute, from: deadline))
+                setTime(
+                    hour: hour,
+                    minute: Calendar.current.component(.minute, from: deadline),
+                    second: Calendar.current.component(.second, from: deadline)
+                )
             }
         )
     }
@@ -238,7 +253,24 @@ struct DeadlinePicker: View {
         Binding(
             get: { Calendar.current.component(.minute, from: deadline) },
             set: { minute in
-                setTime(hour: Calendar.current.component(.hour, from: deadline), minute: minute)
+                setTime(
+                    hour: Calendar.current.component(.hour, from: deadline),
+                    minute: minute,
+                    second: Calendar.current.component(.second, from: deadline)
+                )
+            }
+        )
+    }
+
+    private var secondBinding: Binding<Int> {
+        Binding(
+            get: { Calendar.current.component(.second, from: deadline) },
+            set: { second in
+                setTime(
+                    hour: Calendar.current.component(.hour, from: deadline),
+                    minute: Calendar.current.component(.minute, from: deadline),
+                    second: second
+                )
             }
         )
     }
@@ -249,32 +281,24 @@ struct DeadlinePicker: View {
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(DayColor.text)
 
-            DatePicker("截止日期", selection: clampedDeadlineBinding, in: minimumDeadline..., displayedComponents: [.date])
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                .frame(maxWidth: .infinity, minHeight: 226, alignment: .leading)
-                .accessibilityLabel("截止日期")
-
-            HStack(spacing: 12) {
-                Stepper(value: hourBinding, in: 0...23) {
-                    Text("小时 \(Calendar.current.component(.hour, from: deadline))")
-                        .frame(minWidth: 86, alignment: .leading)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 18) {
+                    calendarPane
+                        .frame(width: 340, alignment: .topLeading)
+                        .frame(minHeight: 286, alignment: .topLeading)
+                    deadlineControls
+                        .frame(width: 260, alignment: .topLeading)
                 }
 
-                Stepper(value: minuteBinding, in: 0...59, step: 5) {
-                    Text("分钟 \(Calendar.current.component(.minute, from: deadline))")
-                        .frame(minWidth: 86, alignment: .leading)
+                VStack(alignment: .leading, spacing: 14) {
+                    calendarPane
+                        .frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
+                    deadlineControls
                 }
-
-                Spacer()
-
-                Text(deadline.formattedDateTime())
-                    .font(.system(.callout, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(DayColor.primary)
             }
 
             if deadline < minimumDeadline {
-                Label("截止时间不能早于当前时间。", systemImage: "exclamationmark.triangle.fill")
+                Label("截止时间必须晚于当前时间，至少预留 \(Int(TaskDeadlinePolicy.minimumLeadSeconds)) 秒。", systemImage: "exclamationmark.triangle.fill")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DayColor.danger)
             }
@@ -284,24 +308,245 @@ struct DeadlinePicker: View {
         .accessibilityElement(children: .contain)
     }
 
+    private var calendarPane: some View {
+        DeadlineCalendarGrid(selectedDate: clampedDeadlineBinding, minimumDate: minimumDeadline)
+            .accessibilityIdentifier("task-editor-deadline-date")
+    }
+
+    private var deadlineControls: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("具体时间")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DayColor.muted)
+                timeStepper("小时", value: hourBinding, range: 0...23, identifier: "task-editor-deadline-hour")
+                timeStepper("分钟", value: minuteBinding, range: 0...59, identifier: "task-editor-deadline-minute")
+                timeStepper("秒", value: secondBinding, range: 0...59, identifier: "task-editor-deadline-second")
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("快捷设置")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DayColor.muted)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    shortcutButton("5 分钟后", identifier: "task-editor-deadline-plus-5-minutes") {
+                        setDeadline(DeadlineShortcutPolicy.relative(minutes: 5))
+                    }
+                    shortcutButton("30 分钟后", identifier: "task-editor-deadline-plus-30-minutes") {
+                        setDeadline(DeadlineShortcutPolicy.relative(minutes: 30))
+                    }
+                    shortcutButton("今晚 23:59", identifier: "task-editor-deadline-tonight") {
+                        setDeadline(DeadlineShortcutPolicy.evening(daysFromToday: 0))
+                    }
+                    shortcutButton("明晚 23:59", identifier: "task-editor-deadline-tomorrow-night") {
+                        setDeadline(DeadlineShortcutPolicy.evening(daysFromToday: 1))
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("最终 deadline")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DayColor.muted)
+                Text(deadline.formattedDateTime())
+                    .font(.system(.callout, design: .monospaced).weight(.semibold))
+                    .foregroundStyle(DayColor.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("task-editor-deadline-preview")
+            }
+        }
+    }
+
+    private func timeStepper(_ title: String, value: Binding<Int>, range: ClosedRange<Int>, identifier: String) -> some View {
+        Stepper(value: value, in: range, step: 1) {
+            HStack(spacing: 8) {
+                Text(title)
+                Spacer()
+                TextField(title, value: value, format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 58)
+            }
+        }
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func shortcutButton(_ title: String, identifier: String, action: @escaping () -> Void) -> some View {
+        Button(title, action: action)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .frame(maxWidth: .infinity)
+            .accessibilityIdentifier(identifier)
+    }
+
     private var clampedDeadlineBinding: Binding<Date> {
         Binding(
-            get: { max(deadline, minimumDeadline) },
+            get: { deadline },
             set: { deadline = max($0, minimumDeadline) }
         )
     }
 
-    private func setTime(hour: Int, minute: Int) {
+    private func setTime(hour: Int, minute: Int, second: Int) {
         let calendar = Calendar.current
         let clampedHour = min(max(hour, 0), 23)
         let clampedMinute = min(max(minute, 0), 59)
+        let clampedSecond = min(max(second, 0), 59)
         let candidate = calendar.date(
             bySettingHour: clampedHour,
             minute: clampedMinute,
-            second: 0,
+            second: clampedSecond,
             of: deadline
         ) ?? deadline
+        deadline = candidate
+    }
+
+    private func setDeadline(_ candidate: Date) {
         deadline = max(candidate, minimumDeadline)
+    }
+}
+
+struct DeadlineCalendarGrid: View {
+    @Binding var selectedDate: Date
+    let minimumDate: Date
+    @State private var displayedMonth: Date
+
+    private let calendar = Calendar.current
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
+
+    init(selectedDate: Binding<Date>, minimumDate: Date) {
+        _selectedDate = selectedDate
+        self.minimumDate = minimumDate
+        _displayedMonth = State(initialValue: Calendar.current.dateInterval(of: .month, for: selectedDate.wrappedValue)?.start ?? selectedDate.wrappedValue)
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text(monthTitle)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(DayColor.text)
+                Spacer()
+                Button {
+                    shiftMonth(-1)
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .buttonStyle(.plain)
+                .disabled(!canMoveToPreviousMonth)
+                .accessibilityLabel("上个月")
+
+                Button {
+                    shiftMonth(1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("下个月")
+            }
+
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(weekdaySymbols, id: \.self) { weekday in
+                    Text(weekday)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DayColor.muted)
+                        .frame(maxWidth: .infinity)
+                }
+
+                ForEach(calendarCells, id: \.date) { cell in
+                    Button {
+                        select(cell.date)
+                    } label: {
+                        Text("\(calendar.component(.day, from: cell.date))")
+                            .font(.callout.weight(isSelected(cell.date) ? .bold : .medium))
+                            .foregroundStyle(dayTextColor(for: cell))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 34)
+                            .background(dayBackground(for: cell), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isDisabled(cell.date))
+                    .accessibilityLabel(cell.date.formatted(date: .numeric, time: .omitted))
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 286, alignment: .top)
+        .onChange(of: selectedDate) { _, newDate in
+            displayedMonth = calendar.dateInterval(of: .month, for: newDate)?.start ?? newDate
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("截止日期")
+    }
+
+    private var monthTitle: String {
+        displayedMonth.formatted(.dateTime.year().month(.wide))
+    }
+
+    private var weekdaySymbols: [String] {
+        let symbols = calendar.shortStandaloneWeekdaySymbols
+        let first = calendar.firstWeekday - 1
+        return Array(symbols[first...]) + Array(symbols[..<first])
+    }
+
+    private var calendarCells: [(date: Date, isCurrentMonth: Bool)] {
+        guard let month = calendar.dateInterval(of: .month, for: displayedMonth),
+              let firstWeek = calendar.dateInterval(of: .weekOfMonth, for: month.start) else {
+            return []
+        }
+        return (0..<42).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: firstWeek.start) else { return nil }
+            return (date, calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month))
+        }
+    }
+
+    private var canMoveToPreviousMonth: Bool {
+        guard let previousMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth),
+              let previousInterval = calendar.dateInterval(of: .month, for: previousMonth) else {
+            return false
+        }
+        return previousInterval.end > calendar.startOfDay(for: minimumDate)
+    }
+
+    private func shiftMonth(_ value: Int) {
+        guard let newMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) else { return }
+        displayedMonth = newMonth
+    }
+
+    private func select(_ day: Date) {
+        let hour = calendar.component(.hour, from: selectedDate)
+        let minute = calendar.component(.minute, from: selectedDate)
+        let second = calendar.component(.second, from: selectedDate)
+        let candidate = calendar.date(bySettingHour: hour, minute: minute, second: second, of: day) ?? day
+        selectedDate = max(candidate, minimumDate)
+    }
+
+    private func isDisabled(_ date: Date) -> Bool {
+        calendar.startOfDay(for: date) < calendar.startOfDay(for: minimumDate)
+    }
+
+    private func isSelected(_ date: Date) -> Bool {
+        calendar.isDate(date, inSameDayAs: selectedDate)
+    }
+
+    private func dayTextColor(for cell: (date: Date, isCurrentMonth: Bool)) -> Color {
+        if isDisabled(cell.date) {
+            return DayColor.muted.opacity(0.36)
+        }
+        if isSelected(cell.date) {
+            return .white
+        }
+        return cell.isCurrentMonth ? DayColor.text : DayColor.muted.opacity(0.62)
+    }
+
+    private func dayBackground(for cell: (date: Date, isCurrentMonth: Bool)) -> Color {
+        if isSelected(cell.date) {
+            return DayColor.primary
+        }
+        if calendar.isDateInToday(cell.date) {
+            return DayColor.primary.opacity(0.12)
+        }
+        return .clear
     }
 }
 
@@ -310,6 +555,7 @@ struct TaskDetailInspector: View {
     let events: [TaskEvent]
     let sessions: [LearningSession]
     let achievements: [AchievementRecord]
+    let now: Date
     let onEditTask: (LearningTask) -> Void
     let onBeginFocus: (LearningTask) -> Void
     let onMarkComplete: (LearningTask) -> Void
@@ -324,6 +570,7 @@ struct TaskDetailInspector: View {
     @State private var confirmingDelete = false
 
     var body: some View {
+        let status = task.status(now: now)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 12) {
@@ -332,7 +579,7 @@ struct TaskDetailInspector: View {
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(DayColor.text)
                             .fixedSize(horizontal: false, vertical: true)
-                        StatusBadge(status: task.status())
+                        StatusBadge(status: status)
                     }
                     Spacer()
                     Menu {
@@ -353,14 +600,14 @@ struct TaskDetailInspector: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     ProgressView(value: task.progress)
-                        .tint(task.status().color)
+                        .tint(status.color)
                         .accessibilityLabel("完成度 \(task.progress.percentText)")
                     Text("完成度 \(task.progress.percentText)")
                         .font(.caption)
                         .foregroundStyle(DayColor.muted)
                 }
 
-                InspectorFactGrid(task: task, sessions: sessions)
+                InspectorFactGrid(task: task, sessions: sessions, now: now)
                 RelatedAchievementsPanel(achievements: achievements)
 
                 InspectorTextBlock(title: "任务内容", text: task.details.nilIfBlank ?? "未填写")
@@ -393,7 +640,7 @@ struct TaskDetailInspector: View {
                         onRecordRecovery(task, recoveryDraft)
                         recoveryDraft = ""
                     } label: {
-                        Label(task.completedAt == nil && task.status() == .overdue ? "补完成" : "保存补救记录", systemImage: "checkmark.circle")
+                        Label(task.completedAt == nil && status == .overdue ? "补完成" : "保存补救记录", systemImage: "checkmark.circle")
                     }
                     InspectorTextBlock(title: "已记录", text: task.recoveryNote.nilIfBlank ?? "暂无")
                 }
@@ -441,6 +688,7 @@ struct TaskDetailInspector: View {
 struct TaskManagementRow: View {
     let task: LearningTask
     let isSelected: Bool
+    let now: Date
     let onSelect: () -> Void
     let onEdit: () -> Void
     let onBeginFocus: () -> Void
@@ -448,16 +696,16 @@ struct TaskManagementRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: task.status().symbolName)
+            Image(systemName: task.status(now: now).symbolName)
                 .font(.title3)
-                .foregroundStyle(task.status().color)
+                .foregroundStyle(task.status(now: now).color)
                 .frame(width: 28)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {
                     Text(task.name)
                         .font(.headline)
-                    StatusBadge(status: task.status())
+                    StatusBadge(status: task.status(now: now))
                 }
                 Text(task.details.nilIfBlank ?? "未填写任务内容")
                     .font(.callout)
@@ -489,7 +737,7 @@ struct TaskManagementRow: View {
         .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .onTapGesture(perform: onSelect)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(task.name)，\(task.status().accessibilityText)，完成度 \(task.progress.percentText)")
+        .accessibilityLabel("\(task.name)，\(task.status(now: now).accessibilityText)，完成度 \(task.progress.percentText)")
     }
 
     private var rowBackground: Color {
@@ -503,6 +751,7 @@ struct TaskManagementRow: View {
 struct InspectorFactGrid: View {
     let task: LearningTask
     let sessions: [LearningSession]
+    let now: Date
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -510,7 +759,7 @@ struct InspectorFactGrid: View {
             FactTile(title: "开始日期", value: task.startedAt?.formattedShortDate() ?? "未开始")
             FactTile(title: "Deadline", value: task.deadline.formattedShortDate())
             FactTile(title: "完成日期", value: task.completedAt?.formattedShortDate() ?? "未完成")
-            FactTile(title: "延期时长", value: task.delayedDays > 0 ? "\(task.delayedDays) 天" : "0 天")
+            FactTile(title: "延期时长", value: task.delayedDays(now: now) > 0 ? "\(task.delayedDays(now: now)) 天" : "0 天")
             FactTile(title: "专注时长", value: "\(sessions.reduce(0) { $0 + $1.durationMinutes }) 分钟")
         }
     }

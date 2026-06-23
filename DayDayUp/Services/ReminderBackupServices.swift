@@ -43,32 +43,47 @@ enum ReminderScheduler {
 
     static func scheduleTaskReminders(for task: LearningTask, settings: AppSettings) {
         cancelTaskReminders(for: task)
-        guard task.completedAt == nil else { return }
+        let reminderDates = taskReminderDates(for: task, settings: settings)
 
-        let leadDate = task.deadline.addingTimeInterval(-Double(max(1, settings.reminderLeadMinutes)) * 60)
-        if leadDate > .now {
+        if let leadDate = reminderDates.lead {
             addNotification(
                 id: leadReminderID(for: task.id),
                 date: leadDate,
                 title: "DayDayUp 任务快到截止时间",
-                body: "\(task.name) 还差一颗松果，先收好再开饭。"
+                body: "\(task.name) 截止时间：\(task.deadline.formattedDateTime())，还差一颗松果，先收好再开饭。"
             )
         }
 
-        guard settings.overdueReminderEnabled else { return }
-        let overdueDate = task.deadline.addingTimeInterval(5 * 60)
-        if overdueDate > .now {
+        if let overdueDate = reminderDates.overdue {
             addNotification(
                 id: overdueReminderID(for: task.id),
                 date: overdueDate,
                 title: "DayDayUp 任务已经逾期",
-                body: "\(task.name) 还没有闭环，先记录卡住原因，再补上。"
+                body: "\(task.name) 截止时间：\(task.deadline.formattedDateTime())，还没有闭环，先记录卡住原因，再补上。"
             )
         }
     }
 
     static func cancelTaskReminders(for task: LearningTask) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: requestIdentifiers(for: task.id))
+    }
+
+    static func taskReminderDates(
+        for task: LearningTask,
+        settings: AppSettings,
+        now: Date = .now
+    ) -> (lead: Date?, overdue: Date?) {
+        guard task.completedAt == nil, task.deadline > now else {
+            return (nil, nil)
+        }
+
+        let leadDate = task.deadline.addingTimeInterval(-Double(max(1, settings.reminderLeadMinutes)) * 60)
+        let overdueDate = task.deadline.addingTimeInterval(5 * 60)
+
+        return (
+            lead: leadDate > now ? leadDate : nil,
+            overdue: settings.overdueReminderEnabled ? overdueDate : nil
+        )
     }
 
     static func scheduleDailyReminder(settings: AppSettings) {
@@ -94,10 +109,14 @@ enum ReminderScheduler {
         content.body = body
         content.sound = .default
 
-        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let components = notificationDateComponents(for: date)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
+    }
+
+    static func notificationDateComponents(for date: Date, calendar: Calendar = .current) -> DateComponents {
+        calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
     }
 
     private static func authorizationState(from status: UNAuthorizationStatus) -> ReminderAuthorizationState {
@@ -114,6 +133,17 @@ enum ReminderScheduler {
             return .ephemeral
         @unknown default:
             return .unknown
+        }
+    }
+}
+
+enum ReminderAuthorizationPolicy {
+    static func didCompleteAuthorizationRequest(state: ReminderAuthorizationState) -> Bool {
+        switch state {
+        case .unknown:
+            return false
+        case .notDetermined, .denied, .authorized, .provisional, .ephemeral:
+            return true
         }
     }
 }

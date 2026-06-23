@@ -34,10 +34,30 @@ struct DayDayUpTests {
         #expect(TaskStatus.active.title == "待执行")
     }
 
+    @Test("today execution overdue count uses injected now")
+    func overdueOpenCountRules() {
+        let now = date(2026, 6, 19, 22, 41)
+        let overdue = LearningTask(name: "5 分钟 deadline 测试", details: "", direction: "", deadline: date(2026, 6, 19, 22, 40))
+        let future = LearningTask(name: "未来任务", details: "", direction: "", deadline: date(2026, 6, 19, 23, 0))
+        let completedLate = LearningTask(
+            name: "已补完成",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 19, 22, 30),
+            completedAt: now,
+            progress: 1
+        )
+
+        #expect(TaskCollectionStatusPolicy.overdueOpenCount(tasks: [overdue, future, completedLate], now: now) == 1)
+        #expect(overdue.status(now: now) == .overdue)
+    }
+
     @Test("task deadline policy prevents fresh tasks from starting overdue")
     func taskDeadlinePolicyRules() {
         let now = date(2026, 6, 13, 10, 0)
         let yesterday = date(2026, 6, 12, 23, 59)
+        let thirtySecondsLater = date(2026, 6, 13, 10, 0, 30)
+        let preciseFuture = date(2026, 6, 13, 22, 40, 17)
         let overdueTask = LearningTask(
             name: "任务名称",
             details: "",
@@ -51,10 +71,185 @@ struct DayDayUpTests {
 
         #expect(normalized > now)
         #expect(normalized == TaskDeadlinePolicy.minimumDeadline(for: nil, now: now))
+        #expect(normalized.timeIntervalSince(now) == TaskDeadlinePolicy.minimumLeadSeconds)
         #expect(preservedOverdue == yesterday)
         #expect(defaultDeadline > now)
         #expect(calendar.component(.hour, from: defaultDeadline) == 23)
         #expect(calendar.component(.minute, from: defaultDeadline) == 59)
+        #expect(TaskDeadlinePolicy.normalizedDeadline(thirtySecondsLater, for: nil, now: now) == thirtySecondsLater)
+        #expect(TaskDeadlinePolicy.normalizedDeadline(preciseFuture, for: nil, now: now) == preciseFuture)
+        #expect(calendar.component(.second, from: preciseFuture) == 17)
+
+        let fiveMinutesLater = DeadlineShortcutPolicy.relative(minutes: 5, now: preciseFuture)
+        #expect(fiveMinutesLater.timeIntervalSince(preciseFuture) == 300)
+        #expect(calendar.component(.second, from: fiveMinutesLater) == 17)
+        #expect(TaskDeadlinePolicy.normalizedDeadline(fiveMinutesLater, for: nil, now: preciseFuture) == fiveMinutesLater)
+    }
+
+    @Test("missed deadline events are inserted once for overdue open tasks")
+    func missedDeadlineEventRules() {
+        let now = date(2026, 6, 19, 0, 20)
+        let deadline = date(2026, 6, 18, 22, 40)
+        let overdue = LearningTask(
+            name: "学习英语",
+            details: "",
+            direction: "英语学习",
+            plannedAt: date(2026, 6, 18, 20, 0),
+            deadline: deadline
+        )
+        let future = LearningTask(
+            name: "未来任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 19, 22, 40)
+        )
+
+        let missed = DeadlineEventRecorder.missingEvents(tasks: [overdue, future], events: [], now: now)
+
+        #expect(missed.count == 1)
+        #expect(missed.first?.taskID == overdue.id)
+        #expect(missed.first?.type == .missed)
+        #expect(missed.first?.occurredAt == deadline)
+
+        let repeated = DeadlineEventRecorder.missingEvents(tasks: [overdue], events: missed, now: now)
+        #expect(repeated.isEmpty)
+    }
+
+    @Test("runtime reminders are inserted once and record notification fallback")
+    func runtimeReminderRules() {
+        let deadline = date(2026, 6, 22, 2, 0)
+        let task = LearningTask(
+            name: "背单词",
+            details: "",
+            direction: "英语学习",
+            deadline: deadline
+        )
+        let settings = AppSettings(reminderLeadMinutes: 30, overdueReminderEnabled: true)
+        let leadNow = date(2026, 6, 22, 1, 30, 1)
+
+        let lead = ReminderRuntimePolicy.dueReminders(
+            tasks: [task],
+            events: [],
+            settings: settings,
+            notificationState: .denied,
+            now: leadNow
+        )
+
+        #expect(lead.count == 1)
+        #expect(lead.first?.type == .leadReminder)
+        #expect(lead.first?.occurredAt == date(2026, 6, 22, 1, 30))
+        #expect(lead.first?.note.contains("系统通知不可用/未授权") == true)
+
+        let repeatedLead = ReminderRuntimePolicy.dueReminders(
+            tasks: [task],
+            events: lead,
+            settings: settings,
+            notificationState: .denied,
+            now: leadNow
+        )
+        #expect(repeatedLead.isEmpty)
+
+        let overdue = ReminderRuntimePolicy.dueReminders(
+            tasks: [task],
+            events: lead,
+            settings: settings,
+            notificationState: .denied,
+            now: date(2026, 6, 22, 2, 6)
+        )
+
+        #expect(overdue.count == 1)
+        #expect(overdue.first?.type == .overdueReminder)
+        #expect(overdue.first?.occurredAt == date(2026, 6, 22, 2, 5))
+        #expect(ReminderRuntimePolicy.dueReminders(tasks: [task], events: lead + overdue, settings: settings, notificationState: .denied, now: date(2026, 6, 22, 2, 6)).isEmpty)
+    }
+
+    @Test("execution helpers use injected now for overdue state")
+    func injectedNowExecutionHelperRules() {
+        let now = date(2026, 6, 22, 2, 1)
+        let overdue = LearningTask(name: "背单词", details: "", direction: "", deadline: date(2026, 6, 22, 2, 0))
+        let future = LearningTask(name: "未来任务", details: "", direction: "", deadline: date(2026, 6, 22, 3, 0))
+
+        #expect(overdue.status(now: now) == .overdue)
+        #expect([future, overdue].nearestIncomplete(now: now)?.id == overdue.id)
+        #expect([future, overdue].sortedForExecution(now: now).map(\.id) == [overdue.id, future.id])
+        #expect(overdue.isRelevantToday(now: now))
+    }
+
+    @Test("missed event remains separate from recovered completion")
+    func missedDeadlineRecoveredRules() {
+        let now = date(2026, 6, 19, 0, 20)
+        let deadline = date(2026, 6, 18, 22, 40)
+        let recovered = LearningTask(
+            name: "补完成任务",
+            details: "",
+            direction: "",
+            plannedAt: date(2026, 6, 18, 20, 0),
+            deadline: deadline,
+            completedAt: now,
+            progress: 1
+        )
+        let missed = TaskEvent(taskID: recovered.id, type: .missed, occurredAt: deadline, note: "未按时完成")
+        let recovery = TaskEvent(taskID: recovered.id, type: .recovered, occurredAt: now, note: "逾期后补完成")
+
+        let generated = MissedDeadlinePolicy.missingEvents(tasks: [recovered], events: [missed, recovery], now: now)
+
+        #expect(generated.isEmpty)
+        #expect([missed, recovery].map(\.type) == [.missed, .recovered])
+    }
+
+    @Test("unknown notification authorization does not count as completed request")
+    func notificationAuthorizationRequestStateRules() {
+        #expect(ReminderAuthorizationPolicy.didCompleteAuthorizationRequest(state: .unknown) == false)
+        #expect(ReminderAuthorizationPolicy.didCompleteAuthorizationRequest(state: .notDetermined))
+        #expect(ReminderAuthorizationPolicy.didCompleteAuthorizationRequest(state: .denied))
+        #expect(ReminderAuthorizationPolicy.didCompleteAuthorizationRequest(state: .authorized))
+    }
+
+    @Test("journey timeline ranks deadline and missed before later recovery events")
+    func journeyTimelineSortRankRules() {
+        let orderedTypes: [TaskEventType] = [
+            .planned,
+            .started,
+            .deadline,
+            .missed,
+            .leadReminder,
+            .overdueReminder,
+            .blocked,
+            .progress,
+            .recovered,
+            .completed,
+            .reviewed
+        ]
+
+        #expect(orderedTypes.map(\.timelineSortRank) == Array(0..<orderedTypes.count))
+        #expect(TaskEventType.deadline.timelineSortRank < TaskEventType.missed.timelineSortRank)
+        #expect(TaskEventType.missed.timelineSortRank < TaskEventType.leadReminder.timelineSortRank)
+        #expect(TaskEventType.leadReminder.timelineSortRank < TaskEventType.overdueReminder.timelineSortRank)
+        #expect(TaskEventType.missed.timelineSortRank < TaskEventType.blocked.timelineSortRank)
+        #expect(TaskEventType.missed.timelineSortRank < TaskEventType.recovered.timelineSortRank)
+    }
+
+    @Test("journey timeline sorts by occurred time before same-second rank")
+    func journeyTimelineChronologicalRules() {
+        let taskID = UUID()
+        let progress = TaskEvent(taskID: taskID, type: .progress, occurredAt: date(2026, 6, 19, 1, 27), note: "先更新进度")
+        let deadline = TaskEvent(taskID: taskID, type: .deadline, occurredAt: date(2026, 6, 19, 1, 30), note: "截止")
+        let missed = TaskEvent(taskID: taskID, type: .missed, occurredAt: date(2026, 6, 19, 1, 30), note: "未完成")
+        let recovered = TaskEvent(taskID: taskID, type: .recovered, occurredAt: date(2026, 6, 19, 1, 33), note: "补完成")
+
+        let sorted = TaskEventTimelinePolicy.sorted([missed, recovered, deadline, progress])
+
+        #expect(sorted.map(\.type) == [.progress, .deadline, .missed, .recovered])
+    }
+
+    @Test("one-shot notification scheduling preserves seconds")
+    func notificationDateComponentsPreserveSeconds() {
+        let deadline = date(2026, 6, 18, 22, 40, 17)
+        let components = ReminderScheduler.notificationDateComponents(for: deadline, calendar: calendar)
+
+        #expect(components.hour == 22)
+        #expect(components.minute == 40)
+        #expect(components.second == 17)
     }
 
     @Test("task repairs impossible deadline before planned date")
@@ -200,12 +395,94 @@ struct DayDayUpTests {
         #expect(repeated.isEmpty)
     }
 
+    @Test("clean week only unlocks for a completed natural week")
+    func cleanWeekAchievementRules() {
+        let currentWeekNow = date(2026, 6, 19, 10, 0)
+        let currentWeekTask = LearningTask(
+            name: "本周按时任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 18, 18, 0),
+            completedAt: date(2026, 6, 18, 17, 0),
+            progress: 1
+        )
+        let currentWeekUnlocked = AchievementRuleEngine.newlyUnlockedKinds(
+            tasks: [currentWeekTask],
+            sessions: [],
+            events: [],
+            existingKindRawValues: [],
+            now: currentWeekNow
+        )
+        #expect(!currentWeekUnlocked.contains(.cleanWeek))
+
+        let afterWeekNow = date(2026, 6, 22, 10, 0)
+        let previousWeekOnTime = LearningTask(
+            name: "上周按时任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 18, 18, 0),
+            completedAt: date(2026, 6, 18, 17, 0),
+            progress: 1
+        )
+        let previousWeekUnlocked = AchievementRuleEngine.newlyUnlockedKinds(
+            tasks: [previousWeekOnTime],
+            sessions: [],
+            events: [],
+            existingKindRawValues: [],
+            now: afterWeekNow
+        )
+        #expect(previousWeekUnlocked.contains(.cleanWeek))
+
+        let recovered = LearningTask(
+            name: "上周补完成任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 18, 18, 0),
+            completedAt: date(2026, 6, 19, 9, 0),
+            progress: 1
+        )
+        let open = LearningTask(
+            name: "上周未完成任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 18, 19, 0)
+        )
+        #expect(!AchievementRuleEngine.newlyUnlockedKinds(tasks: [recovered], sessions: [], events: [], existingKindRawValues: [], now: afterWeekNow).contains(.cleanWeek))
+        #expect(!AchievementRuleEngine.newlyUnlockedKinds(tasks: [open], sessions: [], events: [], existingKindRawValues: [], now: afterWeekNow).contains(.cleanWeek))
+    }
+
     @Test("reminder request identifiers are stable")
     func reminderIdentifiers() {
         let id = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         #expect(ReminderScheduler.leadReminderID(for: id) == "daydayup.task.11111111-2222-3333-4444-555555555555.lead")
         #expect(ReminderScheduler.overdueReminderID(for: id) == "daydayup.task.11111111-2222-3333-4444-555555555555.overdue")
         #expect(ReminderScheduler.requestIdentifiers(for: id).count == 2)
+    }
+
+    @Test("task reminders are only scheduled while deadline is still future")
+    func taskReminderDateRules() {
+        let now = date(2026, 6, 18, 22, 40, 30)
+        let settings = AppSettings(reminderLeadMinutes: 10, overdueReminderEnabled: true)
+        let future = LearningTask(
+            name: "未来任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 18, 23, 0, 17)
+        )
+        let justOverdue = LearningTask(
+            name: "刚逾期任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 6, 18, 22, 40, 0)
+        )
+
+        let futureDates = ReminderScheduler.taskReminderDates(for: future, settings: settings, now: now)
+        let overdueDates = ReminderScheduler.taskReminderDates(for: justOverdue, settings: settings, now: now)
+
+        #expect(futureDates.lead == date(2026, 6, 18, 22, 50, 17))
+        #expect(futureDates.overdue == date(2026, 6, 18, 23, 5, 17))
+        #expect(overdueDates.lead == nil)
+        #expect(overdueDates.overdue == nil)
     }
 
     @Test("backup export, preview, and import restore records")
@@ -748,6 +1025,10 @@ struct DayDayUpTests {
 
     private func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
+    }
+
+    private func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int, _ second: Int) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute, second: second))!
     }
 
     private func inMemoryContainer() throws -> ModelContainer {

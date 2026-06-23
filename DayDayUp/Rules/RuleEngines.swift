@@ -40,7 +40,7 @@ enum AchievementRuleEngine {
         let reviewStreak = longestConsecutiveDayStreak(from: events.filter { $0.type == .reviewed }.map(\.occurredAt))
         unlock(.reviewStreak3, when: reviewStreak >= 3)
 
-        unlock(.cleanWeek, when: hasCleanCurrentWeek(tasks: tasks, now: now))
+        unlock(.cleanWeek, when: hasCleanCompletedWeek(tasks: tasks, now: now))
         unlock(.monthlyClosureRate, when: currentMonthClosureRateReached(tasks: tasks, now: now))
 
         let focusMinutes = sessions.reduce(0) { $0 + $1.durationMinutes }
@@ -112,17 +112,16 @@ enum AchievementRuleEngine {
         return best
     }
 
-    private static func hasCleanCurrentWeek(tasks: [LearningTask], now: Date, calendar: Calendar = .current) -> Bool {
-        guard let week = calendar.dateInterval(of: .weekOfYear, for: now) else { return false }
-        let weekTasks = tasks.filter { task in
-            week.contains(task.deadline) || task.completedAt.map(week.contains) == true
+    private static func hasCleanCompletedWeek(tasks: [LearningTask], now: Date, calendar: Calendar = .current) -> Bool {
+        guard let currentWeek = calendar.dateInterval(of: .weekOfYear, for: now),
+              let completedWeek = calendar.dateInterval(of: .weekOfYear, for: currentWeek.start.addingTimeInterval(-1)) else {
+            return false
         }
+        let weekTasks = tasks.filter { completedWeek.contains($0.deadline) }
         guard !weekTasks.isEmpty else { return false }
-        return !weekTasks.contains { task in
-            if let completedAt = task.completedAt {
-                return completedAt > task.deadline
-            }
-            return task.deadline < now
+        return weekTasks.allSatisfy { task in
+            guard let completedAt = task.completedAt, task.progress >= 1 else { return false }
+            return completedAt <= task.deadline
         }
     }
 
@@ -132,6 +131,12 @@ enum AchievementRuleEngine {
         guard monthTasks.count >= 3 else { return false }
         let closed = monthTasks.filter(\.isClosedLoop)
         return Double(closed.count) / Double(monthTasks.count) >= 0.8
+    }
+}
+
+enum TaskCollectionStatusPolicy {
+    static func overdueOpenCount(tasks: [LearningTask], now: Date = .now) -> Int {
+        tasks.filter { $0.status(now: now) == .overdue }.count
     }
 }
 
@@ -198,7 +203,7 @@ enum MetricCalculator {
         }
         let averageDelayDays = delayedTasks.isEmpty
             ? 0
-            : Double(delayedTasks.reduce(0) { $0 + $1.delayedDays }) / Double(delayedTasks.count)
+            : Double(delayedTasks.reduce(0) { $0 + $1.delayedDays(now: now) }) / Double(delayedTasks.count)
 
         let completionRate = Double(completed.count) / Double(total)
         let onTimeRate = Double(onTime.count) / Double(total)
@@ -264,5 +269,114 @@ enum TaskCalendarPolicy {
             return .completed
         }
         return nil
+    }
+}
+
+enum DeadlineEventRecorder {
+    static func missingEvents(
+        tasks: [LearningTask],
+        events: [TaskEvent],
+        now: Date = .now
+    ) -> [TaskEvent] {
+        let missedTaskIDs = Set(events.filter { $0.type == .missed }.map(\.taskID))
+        return tasks.compactMap { task in
+            guard task.completedAt == nil,
+                  task.deadline < now,
+                  !missedTaskIDs.contains(task.id) else {
+                return nil
+            }
+            return TaskEvent(
+                taskID: task.id,
+                type: .missed,
+                occurredAt: task.deadline,
+                note: "未按时完成：\(task.deadline.formattedDateTime()) 前未闭环。"
+            )
+        }
+    }
+}
+
+enum MissedDeadlinePolicy {
+    static func missingEvents(
+        tasks: [LearningTask],
+        events: [TaskEvent],
+        now: Date = .now
+    ) -> [TaskEvent] {
+        DeadlineEventRecorder.missingEvents(tasks: tasks, events: events, now: now)
+    }
+}
+
+enum ReminderRuntimePolicy {
+    static func dueReminders(
+        tasks: [LearningTask],
+        events: [TaskEvent],
+        settings: AppSettings,
+        notificationState: ReminderAuthorizationState,
+        now: Date = .now
+    ) -> [TaskEvent] {
+        let existingReminderKeys = Set(
+            events
+                .filter { $0.type == .leadReminder || $0.type == .overdueReminder }
+                .map { reminderKey(taskID: $0.taskID, type: $0.type) }
+        )
+
+        return tasks.flatMap { task -> [TaskEvent] in
+            guard task.completedAt == nil else { return [] }
+
+            var reminders: [TaskEvent] = []
+            let leadDate = task.deadline.addingTimeInterval(-Double(max(1, settings.reminderLeadMinutes)) * 60)
+            if leadDate <= now,
+               task.deadline > now,
+               !existingReminderKeys.contains(reminderKey(taskID: task.id, type: .leadReminder)) {
+                reminders.append(
+                    TaskEvent(
+                        taskID: task.id,
+                        type: .leadReminder,
+                        occurredAt: leadDate,
+                        note: reminderNote(
+                            task: task,
+                            notificationState: notificationState,
+                            message: "\(task.name) 截止时间：\(task.deadline.formattedDateTime())，还差一颗松果，先收好再开饭。"
+                        )
+                    )
+                )
+            }
+
+            let overdueDate = task.deadline.addingTimeInterval(5 * 60)
+            if settings.overdueReminderEnabled,
+               overdueDate <= now,
+               !existingReminderKeys.contains(reminderKey(taskID: task.id, type: .overdueReminder)) {
+                reminders.append(
+                    TaskEvent(
+                        taskID: task.id,
+                        type: .overdueReminder,
+                        occurredAt: overdueDate,
+                        note: reminderNote(
+                            task: task,
+                            notificationState: notificationState,
+                            message: "\(task.name) 已经逾期，请记录卡住原因，再补上闭环。"
+                        )
+                    )
+                )
+            }
+
+            return reminders
+        }
+    }
+
+    private static func reminderKey(taskID: UUID, type: TaskEventType) -> String {
+        "\(taskID.uuidString)-\(type.rawValue)"
+    }
+
+    private static func reminderNote(
+        task: LearningTask,
+        notificationState: ReminderAuthorizationState,
+        message: String
+    ) -> String {
+        switch notificationState {
+        case .authorized, .provisional, .ephemeral:
+            return message
+        case .unknown, .notDetermined, .denied:
+            return "系统通知不可用/未授权（\(notificationState.title)），App 内提醒：\(message)"
+        }
     }
 }

@@ -48,6 +48,9 @@ enum TaskEventType: String, CaseIterable, Identifiable {
     case progress
     case blocked
     case deadline
+    case missed
+    case leadReminder
+    case overdueReminder
     case completed
     case recovered
     case reviewed
@@ -61,6 +64,9 @@ enum TaskEventType: String, CaseIterable, Identifiable {
         case .progress: "进度更新"
         case .blocked: "记录卡住原因"
         case .deadline: "截止时间"
+        case .missed: "未按时完成"
+        case .leadReminder: "截止前提醒"
+        case .overdueReminder: "逾期提醒"
         case .completed: "完成任务"
         case .recovered: "补完成"
         case .reviewed: "复盘记录"
@@ -74,15 +80,34 @@ enum TaskEventType: String, CaseIterable, Identifiable {
         case .progress: "chart.line.uptrend.xyaxis.circle.fill"
         case .blocked: "exclamationmark.triangle.fill"
         case .deadline: "calendar.badge.exclamationmark"
+        case .missed: "xmark.octagon.fill"
+        case .leadReminder: "bell.badge.fill"
+        case .overdueReminder: "bell.and.waves.left.and.right.fill"
         case .completed: "checkmark.circle.fill"
         case .recovered: "arrow.triangle.2.circlepath.circle.fill"
         case .reviewed: "text.bubble.fill"
         }
     }
+
+    var timelineSortRank: Int {
+        switch self {
+        case .planned: 0
+        case .started: 1
+        case .deadline: 2
+        case .missed: 3
+        case .leadReminder: 4
+        case .overdueReminder: 5
+        case .blocked: 6
+        case .progress: 7
+        case .recovered: 8
+        case .completed: 9
+        case .reviewed: 10
+        }
+    }
 }
 
 enum TaskDeadlinePolicy {
-    static let minimumLeadSeconds: TimeInterval = 60
+    static let minimumLeadSeconds: TimeInterval = 10
 
     static func defaultDeadline(now: Date = .now, calendar: Calendar = .current) -> Date {
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(24 * 60 * 60)
@@ -107,6 +132,29 @@ enum TaskDeadlinePolicy {
 
     static func normalizedDeadline(_ deadline: Date, for task: LearningTask?, now: Date = .now) -> Date {
         max(deadline, minimumDeadline(for: task, now: now))
+    }
+}
+
+enum DeadlineShortcutPolicy {
+    static func relative(minutes: Int, now: Date = .now) -> Date {
+        now.addingTimeInterval(TimeInterval(minutes * 60))
+    }
+
+    static func evening(daysFromToday: Int, now: Date = .now, calendar: Calendar = .current) -> Date {
+        let targetDay = calendar.date(byAdding: .day, value: daysFromToday, to: now) ?? now
+        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: targetDay)
+            ?? relative(minutes: 5, now: now)
+    }
+}
+
+enum TaskEventTimelinePolicy {
+    static func sorted(_ events: [TaskEvent]) -> [TaskEvent] {
+        events.sorted {
+            if $0.occurredAt != $1.occurredAt {
+                return $0.occurredAt < $1.occurredAt
+            }
+            return $0.type.timelineSortRank < $1.type.timelineSortRank
+        }
     }
 }
 
@@ -136,7 +184,7 @@ enum AchievementKind: String, CaseIterable, Identifiable {
         case .focusStreak7: "连续专注 7 天"
         case .focusStreak14: "连续专注 14 天"
         case .reviewStreak3: "连续复盘 3 天"
-        case .cleanWeek: "本周无逾期"
+        case .cleanWeek: "一周无逾期"
         case .monthlyClosureRate: "单月闭环率达标"
         case .totalFocusOneHour: "累计学习 1 小时"
         case .totalFocusTenHours: "累计学习 10 小时"
@@ -153,7 +201,7 @@ enum AchievementKind: String, CaseIterable, Identifiable {
         case .focusStreak7: "连续 7 天保持学习节奏。"
         case .focusStreak14: "连续 14 天稳定推进。"
         case .reviewStreak3: "连续 3 天完成复盘记录。"
-        case .cleanWeek: "本周暂时没有逾期任务。"
+        case .cleanWeek: "完整一周没有逾期任务。"
         case .monthlyClosureRate: "本月任务闭环率达到 80%。"
         case .totalFocusOneHour: "累计专注时长达到 60 分钟。"
         case .totalFocusTenHours: "累计专注时长达到 600 分钟。"
@@ -255,7 +303,11 @@ final class LearningTask {
     }
 
     var delayedDays: Int {
-        let reference = completedAt ?? .now
+        delayedDays(now: .now)
+    }
+
+    func delayedDays(now: Date = .now) -> Int {
+        let reference = completedAt ?? now
         guard reference > deadline else { return 0 }
         return Calendar.current.dateComponents([.day], from: deadline, to: reference).day ?? 0
     }

@@ -7,11 +7,12 @@ struct ScoreDashboardView: View {
     let tasks: [LearningTask]
     let sessions: [LearningSession]
     let achievements: [AchievementRecord]
+    let now: Date
     @Binding var selectedTaskID: UUID?
     @State private var displayedMonth = Date.now.monthStart()
 
     private var metrics: AppMetrics {
-        MetricCalculator.calculate(tasks: tasks, sessions: sessions)
+        MetricCalculator.calculate(tasks: tasks, sessions: sessions, now: now)
     }
 
     private var metricColumns: [GridItem] {
@@ -68,6 +69,7 @@ struct ScoreDashboardView: View {
 
                 TaskCalendarView(
                     tasks: tasks,
+                    now: now,
                     displayedMonth: $displayedMonth,
                     selectedTaskID: $selectedTaskID
                 )
@@ -249,6 +251,7 @@ struct RadarChartPanel: View {
 
 struct TaskCalendarView: View {
     let tasks: [LearningTask]
+    let now: Date
     @Binding var displayedMonth: Date
     @Binding var selectedTaskID: UUID?
 
@@ -268,7 +271,7 @@ struct TaskCalendarView: View {
                 }
                 .accessibilityLabel("上一个月")
                 Button {
-                    displayedMonth = Date.now.monthStart(calendar: calendar)
+                    displayedMonth = now.monthStart(calendar: calendar)
                 } label: {
                     Text("今天")
                 }
@@ -304,7 +307,7 @@ struct TaskCalendarView: View {
                         CalendarDayCell(
                             date: date,
                             status: status,
-                            isToday: date.dayKey() == Date.now.dayKey(),
+                            isToday: date.dayKey() == now.dayKey(),
                             taskCount: taskCount(for: date)
                         ) {
                             selectedDate = date
@@ -351,8 +354,8 @@ struct TaskCalendarView: View {
                             selectedTaskID = task.id
                         } label: {
                             HStack(spacing: 10) {
-                                Image(systemName: task.status().symbolName)
-                                    .foregroundStyle(task.status().color)
+                                Image(systemName: task.status(now: now).symbolName)
+                                    .foregroundStyle(task.status(now: now).color)
                                     .frame(width: 22)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(task.name)
@@ -403,7 +406,7 @@ struct TaskCalendarView: View {
     }
 
     private func calendarStatus(for date: Date) -> TaskStatus? {
-        TaskCalendarPolicy.status(for: date, tasks: tasks, calendar: calendar)
+        TaskCalendarPolicy.status(for: date, tasks: tasks, now: now, calendar: calendar)
     }
 
     private func taskCount(for date: Date) -> Int {
@@ -416,7 +419,7 @@ struct TaskCalendarView: View {
 
     private func primaryTask(for date: Date) -> LearningTask? {
         let day = date.dayKey(calendar: calendar)
-        return tasks.sortedForExecution().first { task in
+        return tasks.sortedForExecution(now: now).first { task in
             task.deadline.dayKey(calendar: calendar) == day
                 || task.completedAt?.dayKey(calendar: calendar) == day
         }
@@ -424,7 +427,7 @@ struct TaskCalendarView: View {
 
     private func tasksForDate(_ date: Date) -> [LearningTask] {
         let day = date.dayKey(calendar: calendar)
-        return tasks.sortedForExecution().filter { task in
+        return tasks.sortedForExecution(now: now).filter { task in
             task.deadline.dayKey(calendar: calendar) == day
                 || task.completedAt?.dayKey(calendar: calendar) == day
         }
@@ -432,10 +435,10 @@ struct TaskCalendarView: View {
 
     private func calendarReason(for task: LearningTask, on date: Date) -> String {
         let day = date.dayKey(calendar: calendar)
-        if task.status() == .overdue && task.deadline.dayKey(calendar: calendar) == day {
+        if task.status(now: now) == .overdue && task.deadline.dayKey(calendar: calendar) == day {
             return "这一天截止，当前仍未闭环"
         }
-        if task.status() == .recovered && task.deadline.dayKey(calendar: calendar) == day {
+        if task.status(now: now) == .recovered && task.deadline.dayKey(calendar: calendar) == day {
             return "这一天原本逾期，后来已补完成"
         }
         if task.completedAt?.dayKey(calendar: calendar) == day {

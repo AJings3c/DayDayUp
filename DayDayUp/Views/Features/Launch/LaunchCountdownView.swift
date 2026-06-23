@@ -5,7 +5,9 @@ import UniformTypeIdentifiers
 
 struct LaunchCountdownView: View {
     let task: LearningTask?
+    let nextUpcomingTask: LearningTask?
     let metrics: AppMetrics
+    let now: Date
     let onStartToday: () -> Void
     let onTaskDetail: () -> Void
     let onNewTask: () -> Void
@@ -28,6 +30,10 @@ struct LaunchCountdownView: View {
                     }
                     .padding(24)
                     .dayGlass(cornerRadius: 16, interactive: true)
+                }
+
+                if let nextUpcomingTask, nextUpcomingTask.id != task?.id {
+                    NextDeadlineStrip(task: nextUpcomingTask, now: now)
                 }
 
                 HStack(spacing: 12) {
@@ -77,7 +83,7 @@ struct LaunchCountdownView: View {
     @ViewBuilder
     private var statusBadge: some View {
         if let task {
-            StatusBadge(status: task.status())
+            StatusBadge(status: task.status(now: now))
         } else {
             Label("暂无任务", systemImage: "basket")
                 .font(.caption.weight(.semibold))
@@ -142,12 +148,12 @@ struct LaunchCountdownView: View {
         .frame(width: 420, alignment: .leading)
         .padding(20)
         .dayLiquidPanel(cornerRadius: 16, interactive: true, emphasized: task != nil)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: task?.status().rawValue)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: task?.status(now: now).rawValue)
     }
 
     private var squirrelTitle: String {
         guard let task else { return "空篮子，等你放入任务" }
-        switch task.status() {
+        switch task.status(now: now) {
         case .active: return "还差一颗松果"
         case .warning: return "快到饭点了"
         case .overdue: return "小松鼠闹脾气中"
@@ -157,7 +163,7 @@ struct LaunchCountdownView: View {
 
     private var squirrelSubtitle: String {
         guard let task else { return "先写下任务名称、内容和 deadline，DayDayUp 会帮你盯住时间。" }
-        switch task.status() {
+        switch task.status(now: now) {
         case .active: return "空篮子还在等你收尾，先把这颗松果放稳。"
         case .warning: return "轻提醒：deadline 已经很近，今天最好推进一次。"
         case .overdue: return "deadline 已过，先记录卡住原因，再补上闭环。"
@@ -167,10 +173,48 @@ struct LaunchCountdownView: View {
     }
 
     private var statusColor: Color {
-        task?.status().color ?? DayColor.muted
+        task?.status(now: now).color ?? DayColor.muted
     }
 
     private var squirrelMood: SquirrelMood {
-        SquirrelMood(status: task?.status())
+        SquirrelMood(status: task?.status(now: now))
+    }
+}
+
+private struct NextDeadlineStrip: View {
+    let task: LearningTask
+    let now: Date
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "timer")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(DayColor.primary)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("下一截止")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DayColor.muted)
+                Text(task.name)
+                    .font(.headline)
+                    .foregroundStyle(DayColor.text)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                StatusBadge(status: task.status(now: now))
+                Text(task.deadline.formattedDateTime())
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(DayColor.muted)
+            }
+        }
+        .padding(14)
+        .dayPanel(cornerRadius: 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("下一截止任务，\(task.name)，截止时间 \(task.deadline.formattedDateTime())")
     }
 }

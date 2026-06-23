@@ -13,6 +13,7 @@ struct SettingsBackupView: View {
     let events: [TaskEvent]
     let achievements: [AchievementRecord]
     let focusState: ActiveFocusState?
+    let lastReminderScanAt: Date?
     let onAppearanceChanged: () -> Void
     let onSettingsChanged: () -> Void
     let onRequestNotifications: () -> Void
@@ -32,6 +33,7 @@ struct SettingsBackupView: View {
                         events: events,
                         achievements: achievements,
                         focusState: focusState,
+                        lastReminderScanAt: lastReminderScanAt,
                         onAppearanceChanged: onAppearanceChanged,
                         onSettingsChanged: onSettingsChanged,
                         onRequestNotifications: onRequestNotifications,
@@ -56,6 +58,7 @@ struct SettingsBackupContent: View {
     let events: [TaskEvent]
     let achievements: [AchievementRecord]
     let focusState: ActiveFocusState?
+    let lastReminderScanAt: Date?
     let onAppearanceChanged: () -> Void
     let onSettingsChanged: () -> Void
     let onRequestNotifications: () -> Void
@@ -74,6 +77,7 @@ struct SettingsBackupContent: View {
             reminderPanel
             backupPanel
             dataSummaryPanel
+            diagnosticsPanel
         }
     }
 
@@ -135,7 +139,7 @@ struct SettingsBackupContent: View {
             HStack {
                 SectionHeader(title: "提醒", systemImage: "bell.badge")
                 Spacer()
-                Label(settings.notificationStatus.title, systemImage: notificationStatusSymbol)
+                Label(notificationStatusTitle, systemImage: notificationStatusSymbol)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(notificationStatusColor)
                     .padding(.horizontal, 10)
@@ -179,6 +183,15 @@ struct SettingsBackupContent: View {
                 } label: {
                     Label("请求通知权限", systemImage: "bell.and.waves.left.and.right")
                 }
+            }
+
+            if let notificationStatusMessage {
+                Label(notificationStatusMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.callout)
+                    .foregroundStyle(notificationStatusColor)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(notificationStatusColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
             }
         }
         .padding(20)
@@ -330,6 +343,26 @@ struct SettingsBackupContent: View {
         }
     }
 
+    private var notificationStatusTitle: String {
+        switch settings.notificationStatus {
+        case .unknown: "通知状态未知"
+        default: settings.notificationStatus.title
+        }
+    }
+
+    private var notificationStatusMessage: String? {
+        switch settings.notificationStatus {
+        case .unknown:
+            return "通知状态未知，请重新检查权限；App 内仍会提醒并记录逾期未完成。"
+        case .notDetermined:
+            return "尚未开启系统通知权限；App 内仍会提醒并记录逾期未完成。"
+        case .denied:
+            return "系统通知已被拒绝；DayDayUp 会保留 App 内提醒和历程记录。"
+        case .authorized, .provisional, .ephemeral:
+            return nil
+        }
+    }
+
     private var notificationStatusColor: Color {
         switch settings.notificationStatus {
         case .authorized, .provisional, .ephemeral: DayColor.success
@@ -397,6 +430,22 @@ struct SettingsBackupContent: View {
             statusMessage = "打开系统设置失败。"
         }
     }
+
+    private var diagnosticsPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "诊断信息", systemImage: "stethoscope")
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 10)], spacing: 10) {
+                DiagnosticRow(label: "App 路径", value: Bundle.main.bundleURL.path)
+                DiagnosticRow(label: "Bundle ID", value: Bundle.main.bundleIdentifier ?? "未知")
+                DiagnosticRow(label: "进程 ID", value: "\(ProcessInfo.processInfo.processIdentifier)")
+                DiagnosticRow(label: "SwiftData Store", value: (try? DayDayUpModelStore.storeURL.path) ?? "无法读取")
+                DiagnosticRow(label: "通知状态", value: settings.notificationStatus.title)
+                DiagnosticRow(label: "最近提醒扫描", value: lastReminderScanAt?.formattedDateTime() ?? "暂无扫描记录")
+            }
+        }
+        .padding(20)
+        .dayPanel(cornerRadius: 14)
+    }
 }
 
 private struct WidgetSettingChip: View {
@@ -426,5 +475,26 @@ private struct WidgetSettingChip: View {
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
         .dayPanel(cornerRadius: 10)
+    }
+}
+
+private struct DiagnosticRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DayColor.muted)
+            Text(value)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(DayColor.text)
+                .lineLimit(3)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .dayPanel(cornerRadius: 8)
     }
 }

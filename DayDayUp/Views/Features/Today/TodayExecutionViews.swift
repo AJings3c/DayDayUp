@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct TodayExecutionView: View {
     let tasks: [LearningTask]
     let sessions: [LearningSession]
+    let now: Date
     @Binding var activeFocusTaskID: UUID?
     @Binding var activeFocusOriginalStartedAt: Date?
     @Binding var activeFocusStartedAt: Date?
@@ -48,7 +49,7 @@ struct TodayExecutionView: View {
                 HStack(spacing: 12) {
                     MetricCard(title: "待完成任务", value: "\(incompleteTasks.count)", subtitle: "未闭环任务", tint: DayColor.primary)
                     MetricCard(title: "今日专注", value: "\(todayFocusMinutes)", subtitle: "分钟", tint: DayColor.success)
-                    MetricCard(title: "逾期未完成", value: "\(tasks.filter { $0.status() == .overdue }.count)", subtitle: "优先处理", tint: DayColor.danger)
+                    MetricCard(title: "逾期未完成", value: "\(TaskCollectionStatusPolicy.overdueOpenCount(tasks: tasks, now: now))", subtitle: "优先处理", tint: DayColor.danger)
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -64,6 +65,7 @@ struct TodayExecutionView: View {
                                 TaskProgressRow(
                                     task: task,
                                     isSelected: selectedTaskID == task.id,
+                                    now: now,
                                     onSelect: { selectedTaskID = task.id },
                                     onBeginFocus: onBeginFocus,
                                     onUpdateProgress: onUpdateProgress,
@@ -80,7 +82,7 @@ struct TodayExecutionView: View {
     }
 
     private var todayFocusMinutes: Int {
-        let today = Date.now.dayKey()
+        let today = now.dayKey()
         return sessions
             .filter { $0.startedAt.dayKey() == today }
             .reduce(0) { $0 + $1.durationMinutes }
@@ -184,6 +186,7 @@ struct FocusSessionPanel: View {
 struct TaskProgressRow: View {
     @Bindable var task: LearningTask
     let isSelected: Bool
+    let now: Date
     let onSelect: () -> Void
     let onBeginFocus: (LearningTask) -> Void
     let onUpdateProgress: (LearningTask, Double, String) -> Void
@@ -195,6 +198,7 @@ struct TaskProgressRow: View {
     init(
         task: LearningTask,
         isSelected: Bool,
+        now: Date,
         onSelect: @escaping () -> Void,
         onBeginFocus: @escaping (LearningTask) -> Void,
         onUpdateProgress: @escaping (LearningTask, Double, String) -> Void,
@@ -202,6 +206,7 @@ struct TaskProgressRow: View {
     ) {
         self.task = task
         self.isSelected = isSelected
+        self.now = now
         self.onSelect = onSelect
         self.onBeginFocus = onBeginFocus
         self.onUpdateProgress = onUpdateProgress
@@ -219,7 +224,7 @@ struct TaskProgressRow: View {
                                 .font(.headline)
                                 .foregroundStyle(DayColor.text)
                             Spacer()
-                            StatusBadge(status: task.status())
+                            StatusBadge(status: task.status(now: now))
                         }
                         Text(task.details.nilIfBlank ?? "未填写任务内容")
                             .font(.callout)

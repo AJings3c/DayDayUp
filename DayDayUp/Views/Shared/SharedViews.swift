@@ -6,16 +6,17 @@ import UniformTypeIdentifiers
 struct MenuBarCountdownView: View {
     @Query(sort: \LearningTask.deadline) private var tasks: [LearningTask]
     @Environment(\.openWindow) private var openWindow
+    @State private var currentNow = Date.now
 
     private var displayTask: LearningTask? {
-        tasks.nearestIncomplete ?? tasks.latestCompleted
+        tasks.nearestIncomplete(now: currentNow) ?? tasks.latestCompleted
     }
 
     var body: some View {
         GlassHost(spacing: 12) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
-                    SquirrelImage(mood: SquirrelMood(status: displayTask?.status()), size: 44)
+                    SquirrelImage(mood: SquirrelMood(status: displayTask?.status(now: currentNow)), size: 44)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("DayDayUp")
                             .font(.headline)
@@ -28,7 +29,7 @@ struct MenuBarCountdownView: View {
 
                 if let task = displayTask {
                     VStack(alignment: .leading, spacing: 10) {
-                        StatusBadge(status: task.status())
+                        StatusBadge(status: task.status(now: currentNow))
                         Text(task.name)
                             .font(.headline)
                             .lineLimit(2)
@@ -70,6 +71,9 @@ struct MenuBarCountdownView: View {
             .frame(width: 330)
             .dayGlass(cornerRadius: 18, interactive: true)
         }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
+            currentNow = now
+        }
     }
 }
 
@@ -107,6 +111,7 @@ struct DayTextEditor: View {
     let minHeight: CGFloat
     var width: CGFloat?
     let label: String
+    var accessibilityIdentifier: String?
 
     var body: some View {
         TextEditor(text: $text)
@@ -116,6 +121,7 @@ struct DayTextEditor: View {
             .frame(minHeight: minHeight)
             .dayPanel(cornerRadius: 8)
             .accessibilityLabel(label)
+            .accessibilityIdentifier(accessibilityIdentifier ?? label)
     }
 }
 
@@ -177,6 +183,65 @@ struct AchievementToastView: View {
             return "\(record.kind.subtitle) 关联任务：\(relatedTask.name)"
         }
         return record.kind.subtitle
+    }
+}
+
+struct ReminderToastView: View {
+    let event: TaskEvent
+    let relatedTask: LearningTask?
+    let onDismiss: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isVisible = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: event.type.symbolName)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.type == .overdueReminder ? "逾期提醒" : "截止提醒")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DayColor.muted)
+                Text(relatedTask?.name ?? "学习任务")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(DayColor.text)
+                    .lineLimit(2)
+                Text(event.note)
+                    .font(.callout)
+                    .foregroundStyle(DayColor.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DayColor.muted)
+            .accessibilityLabel("关闭提醒")
+        }
+        .padding(14)
+        .frame(width: 380, alignment: .leading)
+        .dayGlass(cornerRadius: 16, interactive: true)
+        .scaleEffect(isVisible || reduceMotion ? 1 : 0.98)
+        .opacity(isVisible ? 1 : 0)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isVisible)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(event.type.title)，\(relatedTask?.name ?? "学习任务")，\(event.note)")
+        .onAppear {
+            isVisible = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                onDismiss()
+            }
+        }
+    }
+
+    private var tint: Color {
+        event.type == .overdueReminder ? DayColor.danger : DayColor.warning
     }
 }
 
@@ -383,7 +448,7 @@ struct CountdownText: View {
                     .minimumScaleFactor(0.76)
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(completedAt == nil ? "倒计时 \(text)" : "任务完成啦，开始干饭")
+            .accessibilityLabel(accessibilityText(now: context.date, text: text))
         }
     }
 
@@ -406,6 +471,13 @@ struct CountdownText: View {
             return completedAt > deadline ? DayColor.recovered : DayColor.success
         }
         return now > deadline ? DayColor.danger : DayColor.primaryDeep
+    }
+
+    private func accessibilityText(now: Date, text: String) -> String {
+        if completedAt != nil {
+            return "任务完成啦，开始干饭"
+        }
+        return deadline > now ? "剩余时间 \(text)" : "逾期时间 \(text)"
     }
 }
 
@@ -433,8 +505,12 @@ struct GlassHost<Content: View>: View {
 
 extension Array where Element == LearningTask {
     var nearestIncomplete: LearningTask? {
+        nearestIncomplete(now: .now)
+    }
+
+    func nearestIncomplete(now: Date) -> LearningTask? {
         filter { $0.completedAt == nil }
-            .sortedForExecution()
+            .sortedForExecution(now: now)
             .first
     }
 
@@ -445,9 +521,13 @@ extension Array where Element == LearningTask {
     }
 
     func sortedForExecution() -> [LearningTask] {
+        sortedForExecution(now: .now)
+    }
+
+    func sortedForExecution(now: Date) -> [LearningTask] {
         sorted { lhs, rhs in
-            let lhsRank = lhs.status().sortRank
-            let rhsRank = rhs.status().sortRank
+            let lhsRank = lhs.status(now: now).sortRank
+            let rhsRank = rhs.status(now: now).sortRank
             if lhsRank != rhsRank {
                 return lhsRank < rhsRank
             }
@@ -456,7 +536,16 @@ extension Array where Element == LearningTask {
     }
 
     func sortedForJourney() -> [LearningTask] {
+        sortedForJourney(now: .now)
+    }
+
+    func sortedForJourney(now: Date) -> [LearningTask] {
         sorted {
+            let lhsRank = $0.status(now: now).sortRank
+            let rhsRank = $1.status(now: now).sortRank
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
             let lhsDate = $0.updatedAt
             let rhsDate = $1.updatedAt
             if lhsDate != rhsDate {

@@ -109,6 +109,10 @@ struct AppBootstrapView: View {
     @State private var activeFocusPausedAt: Date?
     @State private var activeFocusAccumulatedSeconds: Double = 0
     @State private var activeFocusNote = ""
+    @State private var currentNow = Date.now
+    @State private var lastReminderScanAt: Date?
+    @State private var activeReminderToast: TaskEvent?
+    @State private var runtimeEventKeysInsertedThisSession = Set<String>()
 
     private var settings: AppSettings? {
         appSettings.first
@@ -142,6 +146,8 @@ struct AppBootstrapView: View {
             activeFocusPausedAt: $activeFocusPausedAt,
             activeFocusAccumulatedSeconds: $activeFocusAccumulatedSeconds,
             activeFocusNote: $activeFocusNote,
+            currentNow: currentNow,
+            lastReminderScanAt: lastReminderScanAt,
             onNewTask: openNewTask,
             onEditTask: openEditor,
             onBeginFocus: beginFocus,
@@ -165,24 +171,35 @@ struct AppBootstrapView: View {
         .preferredColorScheme(appearanceMode.colorScheme)
         .background(ApplicationAppearanceSync(mode: appearanceMode))
         .overlay(alignment: .topTrailing) {
-            if let activeAchievementToast,
-               selectedSection == .launch || selectedSection == .today {
-                AchievementToastView(
-                    record: activeAchievementToast,
-                    relatedTask: activeAchievementToast.relatedTaskID.flatMap { id in
-                        tasks.first(where: { $0.id == id })
-                    },
-                    onDismiss: { dismissAchievementToast(activeAchievementToast) }
-                )
+            if activeReminderToast != nil || (activeAchievementToast != nil && (selectedSection == .launch || selectedSection == .today)) {
+                VStack(alignment: .trailing, spacing: 12) {
+                    if let activeReminderToast {
+                        ReminderToastView(
+                            event: activeReminderToast,
+                            relatedTask: tasks.first(where: { $0.id == activeReminderToast.taskID }),
+                            onDismiss: { dismissReminderToast(activeReminderToast) }
+                        )
+                    }
+
+                    if let activeAchievementToast,
+                       selectedSection == .launch || selectedSection == .today {
+                        AchievementToastView(
+                            record: activeAchievementToast,
+                            relatedTask: activeAchievementToast.relatedTaskID.flatMap { id in
+                                tasks.first(where: { $0.id == id })
+                            },
+                            onDismiss: { dismissAchievementToast(activeAchievementToast) }
+                        )
+                    }
+                }
                 .padding(24)
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
         .sheet(isPresented: $showingTaskEditor) {
             TaskEditorSheet(task: editingTask) { draft in
                 saveTask(draft)
             }
-            .frame(width: 580, height: 720)
+            .frame(width: 760, height: 760)
         }
         .onAppear {
             bootstrap()
@@ -190,6 +207,12 @@ struct AppBootstrapView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            if recordDeadlineAndReminderEvents() {
+                writeWidgetSnapshot()
+            }
+            if let settings {
+                ReminderScheduler.rescheduleAll(tasks: tasks, settings: settings)
+            }
             consumePendingWidgetIntent()
         }
         .onChange(of: tasks.map(\.id)) { _, _ in
@@ -202,6 +225,12 @@ struct AppBootstrapView: View {
         .onChange(of: activeFocusNote) { _, note in
             focusState?.draftNote = note
             try? modelContext.save()
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
+            currentNow = now
+            if recordDeadlineAndReminderEvents(now: now) {
+                writeWidgetSnapshot(now: now)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .dayDayUpNewTask)) { _ in
             selectedSection = .tasks
@@ -232,6 +261,7 @@ struct AppBootstrapView: View {
         restoreActiveFocus(from: focusState)
         let selectableTasks = removeLegacyPlaceholderTasksIfPresent()
         ensureDeadlineEvents(for: selectableTasks)
+        _ = recordDeadlineAndReminderEvents(for: selectableTasks)
         refreshNotificationStatus(settings)
         if !settings.didRequestNotificationAuthorization {
             requestNotificationAuthorization()
@@ -334,7 +364,7 @@ struct AppBootstrapView: View {
         Task { @MainActor in
             let state = await ReminderScheduler.requestAuthorization()
             settings.notificationStatus = state
-            settings.didRequestNotificationAuthorization = true
+            settings.didRequestNotificationAuthorization = ReminderAuthorizationPolicy.didCompleteAuthorizationRequest(state: state)
             try? modelContext.save()
             ReminderScheduler.rescheduleAll(tasks: tasks, settings: settings)
         }
@@ -345,6 +375,7 @@ struct AppBootstrapView: View {
         normalize(settings)
         try? modelContext.save()
         ReminderScheduler.rescheduleAll(tasks: tasks, settings: settings)
+        _ = recordDeadlineAndReminderEvents()
         refreshNotificationStatus(settings)
         writeWidgetSnapshot()
     }
@@ -431,7 +462,7 @@ struct AppBootstrapView: View {
         if let selectedTaskID, availableTasks.contains(where: { $0.id == selectedTaskID }) {
             return
         }
-        selectedTaskID = availableTasks.nearestIncomplete?.id ?? availableTasks.latestCompleted?.id ?? availableTasks.first?.id
+        selectedTaskID = availableTasks.nearestIncomplete(now: currentNow)?.id ?? availableTasks.latestCompleted?.id ?? availableTasks.first?.id
     }
 
     private func removeLegacyPlaceholderTasksIfPresent() -> [LearningTask] {
@@ -465,6 +496,41 @@ struct AppBootstrapView: View {
 
     private func hasDeadlineEvent(for task: LearningTask) -> Bool {
         events.contains { $0.taskID == task.id && $0.type == .deadline }
+    }
+
+    @discardableResult
+    private func recordDeadlineAndReminderEvents(for sourceTasks: [LearningTask]? = nil, now: Date = .now) -> Bool {
+        lastReminderScanAt = now
+        let scanTasks = sourceTasks ?? tasks
+        let settings = ensureAppSettings()
+        let missedEvents = DeadlineEventRecorder.missingEvents(
+            tasks: scanTasks,
+            events: events,
+            now: now
+        )
+        let reminderEvents = ReminderRuntimePolicy.dueReminders(
+            tasks: scanTasks,
+            events: events + missedEvents,
+            settings: settings,
+            notificationState: settings.notificationStatus,
+            now: now
+        )
+        let newEvents = (missedEvents + reminderEvents)
+            .filter { !runtimeEventKeysInsertedThisSession.contains(runtimeEventKey(for: $0)) }
+        guard !newEvents.isEmpty else { return false }
+        newEvents.forEach { event in
+            runtimeEventKeysInsertedThisSession.insert(runtimeEventKey(for: event))
+            modelContext.insert(event)
+        }
+        try? modelContext.save()
+        if let reminderEvent = newEvents.first(where: { $0.type == .leadReminder || $0.type == .overdueReminder }) {
+            activeReminderToast = reminderEvent
+        }
+        return true
+    }
+
+    private func runtimeEventKey(for event: TaskEvent) -> String {
+        "\(event.taskID.uuidString)-\(event.type.rawValue)"
     }
 
     private func replaceDeadlineEvent(for task: LearningTask) {
@@ -502,6 +568,7 @@ struct AppBootstrapView: View {
         let clampedProgress = min(max(draft.progress, 0), 1)
         let clampedEstimatedMinutes = min(max(draft.estimatedMinutes, 15), 1440)
         let normalizedDeadline = TaskDeadlinePolicy.normalizedDeadline(draft.deadline, for: editingTask, now: now)
+        var changedTask: LearningTask?
 
         if let editingTask {
             editingTask.name = trimmedName
@@ -517,6 +584,7 @@ struct AppBootstrapView: View {
             modelContext.insert(TaskEvent(taskID: editingTask.id, type: .progress, note: "更新任务信息"))
             replaceDeadlineEvent(for: editingTask)
             ReminderScheduler.scheduleTaskReminders(for: editingTask, settings: ensureAppSettings())
+            changedTask = editingTask
         } else {
             let task = LearningTask(
                 name: trimmedName,
@@ -534,9 +602,13 @@ struct AppBootstrapView: View {
             modelContext.insert(deadlineEvent(for: task))
             ReminderScheduler.scheduleTaskReminders(for: task, settings: ensureAppSettings())
             selectedTaskID = task.id
+            changedTask = task
         }
 
         try? modelContext.save()
+        if let changedTask {
+            _ = recordDeadlineAndReminderEvents(for: [changedTask])
+        }
         writeWidgetSnapshot()
         showingTaskEditor = false
         editingTask = nil
@@ -711,7 +783,7 @@ struct AppBootstrapView: View {
 
     private func recordRecovery(_ task: LearningTask, _ note: String) {
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        let shouldCompleteAsRecovery = task.completedAt == nil && task.status() == .overdue
+        let shouldCompleteAsRecovery = task.completedAt == nil && task.status(now: currentNow) == .overdue
 
         if shouldCompleteAsRecovery {
             markComplete(task, note: trimmed)
@@ -721,7 +793,7 @@ struct AppBootstrapView: View {
         guard !trimmed.isEmpty else { return }
         task.recoveryNote = trimmed
         task.updatedAt = .now
-        let eventType: TaskEventType = task.status() == .recovered ? .recovered : .progress
+        let eventType: TaskEventType = task.status(now: currentNow) == .recovered ? .recovered : .progress
         modelContext.insert(TaskEvent(taskID: task.id, type: eventType, note: "补救记录：\(trimmed)"))
         try? modelContext.save()
         writeWidgetSnapshot()
@@ -778,6 +850,12 @@ struct AppBootstrapView: View {
         try? modelContext.save()
     }
 
+    private func dismissReminderToast(_ event: TaskEvent) {
+        if activeReminderToast?.id == event.id {
+            activeReminderToast = nil
+        }
+    }
+
     private func deleteTask(_ task: LearningTask) {
         ReminderScheduler.cancelTaskReminders(for: task)
         if activeFocusTaskID == task.id {
@@ -816,6 +894,8 @@ struct ShellView: View {
     @Binding var activeFocusPausedAt: Date?
     @Binding var activeFocusAccumulatedSeconds: Double
     @Binding var activeFocusNote: String
+    let currentNow: Date
+    let lastReminderScanAt: Date?
     let onNewTask: () -> Void
     let onEditTask: (LearningTask) -> Void
     let onBeginFocus: (LearningTask) -> Void
@@ -837,8 +917,19 @@ struct ShellView: View {
 
     private var selectedTask: LearningTask? {
         selectedTaskID.flatMap { id in tasks.first(where: { $0.id == id }) }
-            ?? tasks.nearestIncomplete
+            ?? tasks.nearestIncomplete(now: currentNow)
             ?? tasks.latestCompleted
+    }
+
+    private var launchTask: LearningTask? {
+        tasks.nearestIncomplete(now: currentNow) ?? tasks.latestCompleted
+    }
+
+    private var nextUpcomingTask: LearningTask? {
+        tasks
+            .filter { $0.completedAt == nil && $0.deadline > currentNow }
+            .sorted { $0.deadline < $1.deadline }
+            .first
     }
 
     var body: some View {
@@ -856,15 +947,18 @@ struct ShellView: View {
             Divider()
 
             VStack(spacing: 0) {
+                NotificationFallbackBanner(settings: settings)
                 Group {
                     switch selectedSection {
                     case .launch:
                         LaunchCountdownView(
-                            task: tasks.nearestIncomplete ?? tasks.latestCompleted,
-                            metrics: MetricCalculator.calculate(tasks: tasks, sessions: sessions),
+                            task: launchTask,
+                            nextUpcomingTask: nextUpcomingTask,
+                            metrics: MetricCalculator.calculate(tasks: tasks, sessions: sessions, now: currentNow),
+                            now: currentNow,
                             onStartToday: { selectedSection = .today },
                             onTaskDetail: {
-                                selectedTaskID = (tasks.nearestIncomplete ?? tasks.latestCompleted)?.id
+                                selectedTaskID = launchTask?.id
                                 selectedSection = .tasks
                             },
                             onNewTask: onNewTask,
@@ -872,8 +966,9 @@ struct ShellView: View {
                         )
                     case .today:
                         TodayExecutionView(
-                            tasks: tasks.sortedForExecution(),
+                            tasks: tasks.sortedForExecution(now: currentNow),
                             sessions: sessions,
+                            now: currentNow,
                             activeFocusTaskID: $activeFocusTaskID,
                             activeFocusOriginalStartedAt: $activeFocusOriginalStartedAt,
                             activeFocusStartedAt: $activeFocusStartedAt,
@@ -891,6 +986,7 @@ struct ShellView: View {
                     case .tasks:
                         TaskManagementView(
                             tasks: tasks,
+                            now: currentNow,
                             selectedTaskID: $selectedTaskID,
                             onNewTask: onNewTask,
                             onEditTask: onEditTask,
@@ -898,13 +994,14 @@ struct ShellView: View {
                             onMarkComplete: onMarkComplete
                         )
                     case .score:
-                        ScoreDashboardView(tasks: tasks, sessions: sessions, achievements: achievements, selectedTaskID: $selectedTaskID)
+                        ScoreDashboardView(tasks: tasks, sessions: sessions, achievements: achievements, now: currentNow, selectedTaskID: $selectedTaskID)
                     case .journey:
                         LearningJourneyView(
                             tasks: tasks,
                             sessions: sessions,
                             events: events,
                             achievements: achievements,
+                            now: currentNow,
                             selectedTaskID: $selectedTaskID
                         )
                     case .settings:
@@ -915,6 +1012,7 @@ struct ShellView: View {
                             events: events,
                             achievements: achievements,
                             focusState: focusState,
+                            lastReminderScanAt: lastReminderScanAt,
                             onAppearanceChanged: onAppearanceChanged,
                             onSettingsChanged: onSettingsChanged,
                             onRequestNotifications: onRequestNotifications,
@@ -941,6 +1039,7 @@ struct ShellView: View {
                         events: events.filter { $0.taskID == selectedTask.id },
                         sessions: sessions.filter { $0.taskID == selectedTask.id },
                         achievements: achievements.filter { $0.relatedTaskID == selectedTask.id },
+                        now: currentNow,
                         onEditTask: onEditTask,
                         onBeginFocus: onBeginFocus,
                         onMarkComplete: onMarkComplete,
@@ -957,6 +1056,62 @@ struct ShellView: View {
             .frame(maxHeight: .infinity)
             .layoutPriority(2)
             .clipped()
+        }
+    }
+}
+
+private struct NotificationFallbackBanner: View {
+    let settings: AppSettings?
+
+    var body: some View {
+        if let settings, shouldShow {
+            HStack(spacing: 8) {
+                Image(systemName: "bell.slash.fill")
+                    .foregroundStyle(tint)
+                    .accessibilityHidden(true)
+                Text(message)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DayColor.text)
+                    .lineLimit(2)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(tint.opacity(0.10))
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(DayColor.border.opacity(0.68))
+                    .frame(height: 1)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(message)
+        }
+    }
+
+    private var shouldShow: Bool {
+        switch settings?.notificationStatus {
+        case .some(.authorized), .some(.provisional), .some(.ephemeral):
+            return false
+        case .some(.unknown), .some(.notDetermined), .some(.denied), nil:
+            return true
+        }
+    }
+
+    private var tint: Color {
+        if case .some(.denied) = settings?.notificationStatus {
+            return DayColor.danger
+        }
+        return DayColor.warning
+    }
+
+    private var message: String {
+        switch settings?.notificationStatus {
+        case .some(.denied):
+            return "系统通知已被拒绝，DayDayUp 会使用 App 内提醒并记录提醒事件。"
+        case .some(.notDetermined):
+            return "尚未开启系统通知，DayDayUp 会先使用 App 内提醒并记录提醒事件。"
+        default:
+            return "通知状态未知，DayDayUp 会先使用 App 内提醒并记录提醒事件。"
         }
     }
 }

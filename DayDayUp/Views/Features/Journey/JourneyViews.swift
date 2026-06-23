@@ -8,6 +8,7 @@ struct LearningJourneyView: View {
     let sessions: [LearningSession]
     let events: [TaskEvent]
     let achievements: [AchievementRecord]
+    let now: Date
     @Binding var selectedTaskID: UUID?
     @State private var filter: TaskFilter = .all
     @State private var showsOpenLoopsOnly = false
@@ -22,19 +23,19 @@ struct LearningJourneyView: View {
             .filter { task in
                 switch filter {
                 case .all: true
-                case .today: task.isRelevantToday()
+                case .today: task.isRelevantToday(now: now)
                 case .incomplete: task.completedAt == nil || !task.isClosedLoop
-                case .active: task.status() == .active || task.status() == .warning
-                case .overdue: task.status() == .overdue
-                case .completed: task.status() == .completed
-                case .recovered: task.status() == .recovered
+                case .active: task.status(now: now) == .active || task.status(now: now) == .warning
+                case .overdue: task.status(now: now) == .overdue
+                case .completed: task.status(now: now) == .completed
+                case .recovered: task.status(now: now) == .recovered
                 case .early: task.isEarlyCompleted
                 }
             }
             .filter { task in
                 showsOpenLoopsOnly ? !task.isClosedLoop : true
             }
-            .sortedForJourney()
+            .sortedForJourney(now: now)
     }
 
     var body: some View {
@@ -68,6 +69,7 @@ struct LearningJourneyView: View {
                                     JourneyArchiveRow(
                                         task: task,
                                         isSelected: selectedTaskID == task.id,
+                                        now: now,
                                         onSelect: { selectedTaskID = task.id }
                                     )
                                 }
@@ -82,7 +84,8 @@ struct LearningJourneyView: View {
                         task: selectedTask,
                         events: events.filter { $0.taskID == selectedTask.id },
                         sessions: sessions.filter { $0.taskID == selectedTask.id },
-                        achievements: achievements.filter { $0.relatedTaskID == selectedTask.id }
+                        achievements: achievements.filter { $0.relatedTaskID == selectedTask.id },
+                        now: now
                     )
                 } else {
                     EmptyStateView(title: "选择一个任务", subtitle: "查看闭环、完成度、延期时长、卡住原因、补救记录和复盘。")
@@ -98,6 +101,7 @@ struct LearningJourneyView: View {
 struct JourneyArchiveRow: View {
     let task: LearningTask
     let isSelected: Bool
+    let now: Date
     let onSelect: () -> Void
 
     var body: some View {
@@ -109,8 +113,8 @@ struct JourneyArchiveRow: View {
                         .foregroundStyle(DayColor.text)
                         .lineLimit(1)
                     Spacer()
-                    Image(systemName: task.status().symbolName)
-                        .foregroundStyle(task.status().color)
+                    Image(systemName: task.status(now: now).symbolName)
+                        .foregroundStyle(task.status(now: now).color)
                 }
                 Text(task.isClosedLoop ? "已闭环" : "未闭环")
                     .font(.caption.weight(.semibold))
@@ -118,7 +122,7 @@ struct JourneyArchiveRow: View {
                 HStack {
                     Text("完成度 \(task.progress.percentText)")
                     Spacer()
-                    Text(task.delayedDays > 0 ? "延期 \(task.delayedDays) 天" : "未延期")
+                    Text(task.delayedDays(now: now) > 0 ? "延期 \(task.delayedDays(now: now)) 天" : "未延期")
                 }
                 .font(.caption)
                 .foregroundStyle(DayColor.muted)
@@ -129,7 +133,7 @@ struct JourneyArchiveRow: View {
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(isSelected ? DayColor.primary.opacity(0.5) : DayColor.border))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(task.name)，\(task.isClosedLoop ? "已闭环" : "未闭环")，\(task.status().accessibilityText)")
+        .accessibilityLabel("\(task.name)，\(task.isClosedLoop ? "已闭环" : "未闭环")，\(task.status(now: now).accessibilityText)")
     }
 }
 
@@ -138,6 +142,7 @@ struct JourneyTaskDetail: View {
     let events: [TaskEvent]
     let sessions: [LearningSession]
     let achievements: [AchievementRecord]
+    let now: Date
 
     var body: some View {
         ScrollView {
@@ -152,13 +157,13 @@ struct JourneyTaskDetail: View {
                             .foregroundStyle(DayColor.muted)
                     }
                     Spacer()
-                    StatusBadge(status: task.status())
+                    StatusBadge(status: task.status(now: now))
                 }
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
                     JourneyMetric(title: "闭环状态", value: task.isClosedLoop ? "已闭环" : "未闭环", tint: task.isClosedLoop ? DayColor.success : DayColor.danger)
-                    JourneyMetric(title: "完成度", value: task.progress.percentText, tint: task.status().color)
-                    JourneyMetric(title: "延期时长", value: task.delayedDays > 0 ? "\(task.delayedDays) 天" : "0 天", tint: task.delayedDays > 0 ? DayColor.danger : DayColor.success)
+                    JourneyMetric(title: "完成度", value: task.progress.percentText, tint: task.status(now: now).color)
+                    JourneyMetric(title: "延期时长", value: task.delayedDays(now: now) > 0 ? "\(task.delayedDays(now: now)) 天" : "0 天", tint: task.delayedDays(now: now) > 0 ? DayColor.danger : DayColor.success)
                     JourneyMetric(title: "专注时长", value: "\(sessions.reduce(0) { $0 + $1.durationMinutes }) 分钟", tint: DayColor.primary)
                 }
 
@@ -169,7 +174,7 @@ struct JourneyTaskDetail: View {
                     JourneyDateRow(label: "制定计划", date: task.plannedAt)
                     JourneyDateRow(label: "开始执行", date: task.startedAt)
                     JourneyDateRow(label: "截止时间", date: task.deadline)
-                    JourneyDateRow(label: task.status() == .recovered ? "补完成时间" : "完成时间", date: task.completedAt)
+                    JourneyDateRow(label: task.status(now: now) == .recovered ? "补完成时间" : "完成时间", date: task.completedAt)
                 }
                 .padding(16)
                 .dayPanel(cornerRadius: 12)
@@ -192,7 +197,7 @@ struct JourneyTaskDetail: View {
     }
 
     private var timelineEvents: [TaskEvent] {
-        events.sorted { $0.occurredAt < $1.occurredAt }
+        TaskEventTimelinePolicy.sorted(events)
     }
 }
 
@@ -243,7 +248,8 @@ struct EventTimelineList: View {
         switch event.type {
         case .completed: DayColor.success
         case .recovered: DayColor.recovered
-        case .deadline, .blocked: DayColor.danger
+        case .deadline, .missed, .blocked, .overdueReminder: DayColor.danger
+        case .leadReminder: DayColor.warning
         case .started: DayColor.primary
         case .planned, .progress, .reviewed: DayColor.muted
         }
