@@ -79,6 +79,11 @@ struct TodayExecutionView: View {
                                 )
                             }
                         }
+                        TodayClosureGuidePanel(
+                            selectedTask: selectedTask ?? incompleteTasks.first,
+                            now: now,
+                            overdueCount: TaskCollectionStatusPolicy.overdueOpenCount(tasks: tasks, now: now)
+                        )
                     }
                 }
             }
@@ -92,6 +97,139 @@ struct TodayExecutionView: View {
         return sessions
             .filter { $0.startedAt.dayKey() == today }
             .reduce(0) { $0 + $1.durationMinutes }
+    }
+
+    private var selectedTask: LearningTask? {
+        selectedTaskID.flatMap { id in incompleteTasks.first(where: { $0.id == id }) }
+    }
+}
+
+private struct TodayClosureGuidePanel: View {
+    let selectedTask: LearningTask?
+    let now: Date
+    let overdueCount: Int
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "今日收尾清单", systemImage: "checklist")
+                ForEach(rows) { row in
+                    TodayGuideRow(row: row)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
+            .dayPanel(cornerRadius: 12)
+
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "执行判断", systemImage: "scope")
+                Text(summaryTitle)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(summaryTint)
+                Text(summaryText)
+                    .font(.callout)
+                    .foregroundStyle(DayColor.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if let selectedTask {
+                    HStack {
+                        StatusBadge(status: selectedTask.status(now: now))
+                        Text(selectedTask.deadline.formattedDateTime())
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(DayColor.muted)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
+            .dayPanel(cornerRadius: 12)
+        }
+    }
+
+    private var rows: [TodayGuideItem] {
+        guard let selectedTask else {
+            return [
+                TodayGuideItem(icon: "play.circle.fill", title: "选择任务", detail: "从执行队列里选择一条任务开始。", tint: DayColor.primary),
+                TodayGuideItem(icon: "chart.line.uptrend.xyaxis", title: "记录进度", detail: "学习后更新完成度和备注。", tint: DayColor.success),
+                TodayGuideItem(icon: "text.bubble.fill", title: "完成后复盘", detail: "闭环时补一句收获或卡点。", tint: DayColor.recovered)
+            ]
+        }
+
+        return [
+            TodayGuideItem(icon: "play.circle.fill", title: "先开始一次专注", detail: "当前任务：\(selectedTask.name)", tint: DayColor.primary),
+            TodayGuideItem(icon: "checkmark.seal.fill", title: "对照完成标准", detail: selectedTask.completionCriteria.nilIfBlank ?? "这个任务还没有完成标准。", tint: DayColor.success),
+            TodayGuideItem(icon: "square.and.pencil", title: "留下可复盘记录", detail: "进度、卡住原因和复盘备注都会进入学习历程。", tint: DayColor.recovered)
+        ]
+    }
+
+    private var summaryTitle: String {
+        guard let selectedTask else { return "今天还没有选中任务" }
+        switch selectedTask.status(now: now) {
+        case .overdue: return "先处理逾期闭环"
+        case .warning: return "deadline 已经接近"
+        case .active: return overdueCount > 0 ? "有逾期任务待处理" : "节奏仍可控"
+        case .completed: return "任务已闭环"
+        case .recovered: return "任务已补完成"
+        }
+    }
+
+    private var summaryText: String {
+        guard let selectedTask else {
+            return "选择任务后，这里会显示今日执行判断和截止时间。"
+        }
+        switch selectedTask.status(now: now) {
+        case .overdue:
+            return "deadline 已过，先记录卡住原因，再推进补救动作。"
+        case .warning:
+            return "先做能接近完成标准的一小步，避免只记录无效进度。"
+        case .active:
+            return "任务尚未逾期。完成一次专注后，记得更新进度备注。"
+        case .completed:
+            return "任务已经完成，补一句复盘能让评分更完整。"
+        case .recovered:
+            return "任务已经补完成，补救记录会帮助后续复盘拖延原因。"
+        }
+    }
+
+    private var summaryTint: Color {
+        guard let selectedTask else { return DayColor.muted }
+        return selectedTask.status(now: now).color
+    }
+}
+
+private struct TodayGuideItem: Identifiable {
+    var id: String { title }
+    let icon: String
+    let title: String
+    let detail: String
+    let tint: Color
+}
+
+private struct TodayGuideRow: View {
+    let row: TodayGuideItem
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: row.icon)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(row.tint)
+                .frame(width: 18, height: 18)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(row.title)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(DayColor.text)
+                    .lineLimit(1)
+                Text(row.detail)
+                    .font(.caption)
+                    .foregroundStyle(DayColor.muted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 

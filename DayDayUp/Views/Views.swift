@@ -997,7 +997,9 @@ struct ShellView: View {
             Divider()
 
             VStack(spacing: 0) {
-                NotificationFallbackBanner(settings: settings)
+                if selectedSection == .settings {
+                    NotificationFallbackBanner(settings: settings)
+                }
                 Group {
                     switch selectedSection {
                     case .launch:

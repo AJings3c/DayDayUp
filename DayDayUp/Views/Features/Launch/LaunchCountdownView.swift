@@ -42,6 +42,19 @@ struct LaunchCountdownView: View {
                     MetricCard(title: "任务闭环率", value: metrics.closedLoopRate.percentText, subtitle: "完成并达到标准", tint: DayColor.success)
                     MetricCard(title: "补完成率", value: metrics.recoveredRate.percentText, subtitle: "逾期后补上的比例", tint: DayColor.recovered)
                 }
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12)], spacing: 12) {
+                    LaunchNextActionPanel(
+                        task: task,
+                        now: now,
+                        onStartToday: onStartToday,
+                        onTaskDetail: onTaskDetail,
+                        onNewTask: onNewTask,
+                        onCreateSampleTask: onCreateSampleTask,
+                        onBeginFocus: onBeginFocus
+                    )
+                    LaunchClosureSnapshotPanel(task: task, now: now)
+                }
             }
             .padding(28)
         }
@@ -188,6 +201,230 @@ struct LaunchCountdownView: View {
 
     private var squirrelMood: SquirrelMood {
         SquirrelMood(status: task?.status(now: now))
+    }
+}
+
+private struct LaunchNextActionPanel: View {
+    let task: LearningTask?
+    let now: Date
+    let onStartToday: () -> Void
+    let onTaskDetail: () -> Void
+    let onNewTask: () -> Void
+    let onCreateSampleTask: () -> Void
+    let onBeginFocus: (LearningTask) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "下一步行动", systemImage: "figure.run")
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(actionRows) { row in
+                    LaunchChecklistRow(row: row)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 10) {
+                if let task, task.completedAt == nil {
+                    Button {
+                        onBeginFocus(task)
+                    } label: {
+                        Label("开始专注", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                } else if task != nil {
+                    Button(action: onStartToday) {
+                        Label("查看今日执行", systemImage: "play.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                } else {
+                    Button(action: onNewTask) {
+                        Label("创建任务", systemImage: "plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+
+                Button(action: task == nil ? onCreateSampleTask : onTaskDetail) {
+                    Label(task == nil ? "体验示例" : "查看详情", systemImage: task == nil ? "sparkles" : "sidebar.right")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 176, alignment: .topLeading)
+        .dayPanel(cornerRadius: 12)
+    }
+
+    private var actionRows: [LaunchActionRow] {
+        guard let task else {
+            return [
+                LaunchActionRow(icon: "1.circle.fill", title: "录入第一条学习任务", detail: "写清学习方向、内容、deadline 和完成标准。", tint: DayColor.primary),
+                LaunchActionRow(icon: "2.circle.fill", title: "不确定怎么填就体验示例", detail: "示例只会在点击后创建，不会自动污染学习记录。", tint: DayColor.squirrel),
+                LaunchActionRow(icon: "3.circle.fill", title: "回到今日执行开始专注", detail: "任务创建后，专注、进度和复盘都集中到执行页。", tint: DayColor.success)
+            ]
+        }
+
+        switch task.status(now: now) {
+        case .completed, .recovered:
+            return [
+                LaunchActionRow(icon: "checkmark.circle.fill", title: "任务已经完成", detail: "补上一句复盘，记录最有价值的收获。", tint: DayColor.success),
+                LaunchActionRow(icon: "text.bubble.fill", title: task.reviewNote.nilIfBlank == nil ? "复盘备注待填写" : "复盘备注已记录", detail: task.reviewNote.nilIfBlank ?? "写一句就够，保持闭环习惯。", tint: DayColor.recovered),
+                LaunchActionRow(icon: "plus.circle.fill", title: "安排下一颗松果", detail: "继续录入下一条明确 deadline 的学习任务。", tint: DayColor.primary)
+            ]
+        case .overdue:
+            return [
+                LaunchActionRow(icon: "exclamationmark.triangle.fill", title: "先处理逾期任务", detail: "记录卡住原因，再决定补完成或调整任务。", tint: DayColor.danger),
+                LaunchActionRow(icon: "text.badge.checkmark", title: "对照完成标准推进", detail: task.completionCriteria.nilIfBlank ?? "这个任务还没有完成标准。", tint: DayColor.warning),
+                LaunchActionRow(icon: "arrow.triangle.2.circlepath", title: "留下补救记录", detail: task.recoveryNote.nilIfBlank ?? "补救记录为空，后续复盘会缺少依据。", tint: DayColor.recovered)
+            ]
+        case .warning:
+            return [
+                LaunchActionRow(icon: "timer", title: "deadline 已经接近", detail: "现在开始一次专注，先推进最小可交付结果。", tint: DayColor.warning),
+                LaunchActionRow(icon: "checkmark.seal.fill", title: "确认完成标准", detail: task.completionCriteria.nilIfBlank ?? "这个任务还没有完成标准。", tint: DayColor.primary),
+                LaunchActionRow(icon: "chart.line.uptrend.xyaxis", title: "更新进度", detail: "完成一段学习后记录进度，避免只靠记忆判断。", tint: DayColor.success)
+            ]
+        case .active:
+            return [
+                LaunchActionRow(icon: "play.circle.fill", title: "开始一次专注", detail: "把当前任务推进一小段，再回到今日执行记录。", tint: DayColor.primary),
+                LaunchActionRow(icon: "checkmark.seal.fill", title: "对照完成标准", detail: task.completionCriteria.nilIfBlank ?? "这个任务还没有完成标准。", tint: DayColor.success),
+                LaunchActionRow(icon: "calendar.badge.clock", title: "盯住截止时间", detail: task.deadline.formattedDateTime(), tint: DayColor.warning)
+            ]
+        }
+    }
+}
+
+private struct LaunchClosureSnapshotPanel: View {
+    let task: LearningTask?
+    let now: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "闭环字段快照", systemImage: "checklist")
+
+            VStack(spacing: 10) {
+                LaunchChecklistRow(row: criteriaRow)
+                LaunchChecklistRow(row: blockRow)
+                LaunchChecklistRow(row: recoveryRow)
+                LaunchChecklistRow(row: reviewRow)
+            }
+
+            Spacer(minLength: 0)
+
+            Text(summary)
+                .font(.callout)
+                .foregroundStyle(DayColor.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 176, alignment: .topLeading)
+        .dayPanel(cornerRadius: 12)
+    }
+
+    private var criteriaRow: LaunchActionRow {
+        guard let task else {
+            return LaunchActionRow(icon: "circle", title: "完成标准", detail: "还没有任务", tint: DayColor.muted)
+        }
+        return LaunchActionRow(
+            icon: task.completionCriteria.nilIfBlank == nil ? "circle" : "checkmark.circle.fill",
+            title: "完成标准",
+            detail: task.completionCriteria.nilIfBlank ?? "未填写",
+            tint: task.completionCriteria.nilIfBlank == nil ? DayColor.warning : DayColor.success
+        )
+    }
+
+    private var blockRow: LaunchActionRow {
+        guard let task else {
+            return LaunchActionRow(icon: "circle", title: "卡住原因", detail: "还没有任务", tint: DayColor.muted)
+        }
+        return LaunchActionRow(
+            icon: task.blockReason.nilIfBlank == nil ? "circle" : "exclamationmark.triangle.fill",
+            title: "卡住原因",
+            detail: task.blockReason.nilIfBlank ?? "暂无",
+            tint: task.blockReason.nilIfBlank == nil ? DayColor.muted : DayColor.warning
+        )
+    }
+
+    private var recoveryRow: LaunchActionRow {
+        guard let task else {
+            return LaunchActionRow(icon: "circle", title: "补救记录", detail: "还没有任务", tint: DayColor.muted)
+        }
+        return LaunchActionRow(
+            icon: task.recoveryNote.nilIfBlank == nil ? "circle" : "arrow.triangle.2.circlepath.circle.fill",
+            title: "补救记录",
+            detail: task.recoveryNote.nilIfBlank ?? "暂无",
+            tint: task.recoveryNote.nilIfBlank == nil ? DayColor.muted : DayColor.recovered
+        )
+    }
+
+    private var reviewRow: LaunchActionRow {
+        guard let task else {
+            return LaunchActionRow(icon: "circle", title: "复盘备注", detail: "还没有任务", tint: DayColor.muted)
+        }
+        return LaunchActionRow(
+            icon: task.reviewNote.nilIfBlank == nil ? "circle" : "text.bubble.fill",
+            title: "复盘备注",
+            detail: task.reviewNote.nilIfBlank ?? "暂无",
+            tint: task.reviewNote.nilIfBlank == nil ? DayColor.muted : DayColor.primary
+        )
+    }
+
+    private var summary: String {
+        guard let task else {
+            return "创建任务后，这里会显示完成标准、卡住原因、补救记录和复盘备注。"
+        }
+        switch task.status(now: now) {
+        case .completed:
+            return "任务已按时闭环。复盘为空时，建议补一句收获或下次改进点。"
+        case .recovered:
+            return "任务已补完成。保留补救记录和复盘，后续评分才有依据。"
+        case .overdue:
+            return "任务逾期未闭环。优先补齐卡住原因和下一步补救动作。"
+        case .warning:
+            return "任务接近 deadline。先按完成标准推进，避免只记录进度。"
+        case .active:
+            return "任务仍在推进。完成标准越清楚，后面的评分和复盘越可信。"
+        }
+    }
+}
+
+private struct LaunchActionRow: Identifiable {
+    var id: String { title }
+    let icon: String
+    let title: String
+    let detail: String
+    let tint: Color
+}
+
+private struct LaunchChecklistRow: View {
+    let row: LaunchActionRow
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: row.icon)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(row.tint)
+                .frame(width: 18, height: 18)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(row.title)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(DayColor.text)
+                    .lineLimit(1)
+                Text(row.detail)
+                    .font(.caption)
+                    .foregroundStyle(DayColor.muted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
