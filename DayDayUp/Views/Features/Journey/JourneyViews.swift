@@ -5,9 +5,9 @@ import UniformTypeIdentifiers
 
 struct LearningJourneyView: View {
     let tasks: [LearningTask]
-    let sessions: [LearningSession]
-    let events: [TaskEvent]
-    let achievements: [AchievementRecord]
+    @Query(sort: \LearningSession.startedAt, order: .reverse) private var sessions: [LearningSession]
+    @Query(sort: \TaskEvent.occurredAt, order: .reverse) private var events: [TaskEvent]
+    @Query(sort: \AchievementRecord.unlockedAt, order: .reverse) private var achievements: [AchievementRecord]
     let now: Date
     @Binding var selectedTaskID: UUID?
     @State private var filter: TaskFilter = .all

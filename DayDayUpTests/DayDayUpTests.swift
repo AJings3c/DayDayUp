@@ -113,6 +113,12 @@ struct DayDayUpTests {
 
         let repeated = DeadlineEventRecorder.missingEvents(tasks: [overdue], events: missed, now: now)
         #expect(repeated.isEmpty)
+
+        let revisedDeadline = date(2026, 6, 19, 0, 0)
+        overdue.deadline = revisedDeadline
+        let revisedMissed = DeadlineEventRecorder.missingEvents(tasks: [overdue], events: missed, now: date(2026, 6, 19, 0, 30))
+        #expect(revisedMissed.count == 1)
+        #expect(revisedMissed.first?.occurredAt == revisedDeadline)
     }
 
     @Test("runtime reminders are inserted once and record notification fallback")
@@ -148,6 +154,19 @@ struct DayDayUpTests {
             now: leadNow
         )
         #expect(repeatedLead.isEmpty)
+
+        task.deadline = date(2026, 6, 22, 3, 0)
+        let revisedLead = ReminderRuntimePolicy.dueReminders(
+            tasks: [task],
+            events: lead,
+            settings: settings,
+            notificationState: .denied,
+            now: date(2026, 6, 22, 2, 30, 1)
+        )
+        #expect(revisedLead.count == 1)
+        #expect(revisedLead.first?.occurredAt == date(2026, 6, 22, 2, 30))
+
+        task.deadline = deadline
 
         let overdue = ReminderRuntimePolicy.dueReminders(
             tasks: [task],
@@ -497,7 +516,7 @@ struct DayDayUpTests {
         #expect(ReminderScheduler.requestIdentifiers(for: id).count == 2)
     }
 
-    @Test("task reminders are only scheduled while deadline is still future")
+    @Test("task reminders preserve a pending overdue notification after deadline")
     func taskReminderDateRules() {
         let now = date(2026, 6, 18, 22, 40, 30)
         let settings = AppSettings(reminderLeadMinutes: 10, overdueReminderEnabled: true)
@@ -516,14 +535,22 @@ struct DayDayUpTests {
 
         let futureDates = ReminderScheduler.taskReminderDates(for: future, settings: settings, now: now)
         let overdueDates = ReminderScheduler.taskReminderDates(for: justOverdue, settings: settings, now: now)
+        let expiredDates = ReminderScheduler.taskReminderDates(
+            for: justOverdue,
+            settings: settings,
+            now: date(2026, 6, 18, 22, 45, 1)
+        )
 
         #expect(futureDates.lead == date(2026, 6, 18, 22, 50, 17))
         #expect(futureDates.overdue == date(2026, 6, 18, 23, 5, 17))
         #expect(overdueDates.lead == nil)
-        #expect(overdueDates.overdue == nil)
+        #expect(overdueDates.overdue == date(2026, 6, 18, 22, 45))
+        #expect(expiredDates.lead == nil)
+        #expect(expiredDates.overdue == nil)
     }
 
     @Test("backup export, preview, and import restore records")
+    @MainActor
     func backupRoundTripRestoresRecords() throws {
         let taskID = UUID(uuidString: "22222222-3333-4444-5555-666666666666")!
         let sessionID = UUID(uuidString: "33333333-4444-5555-6666-777777777777")!
@@ -537,9 +564,9 @@ struct DayDayUpTests {
             plannedAt: date(2026, 6, 8, 9, 0),
             startedAt: date(2026, 6, 8, 10, 0),
             deadline: date(2026, 6, 9, 18, 0),
-            completedAt: date(2026, 6, 9, 12, 0),
+            completedAt: nil,
             estimatedMinutes: 90,
-            progress: 1,
+            progress: 0.75,
             completionCriteria: "Build and tests pass",
             resourceLink: "https://example.com",
             notes: "MVP scope",
@@ -621,10 +648,6 @@ struct DayDayUpTests {
         let summary = try DayDayUpBackupService.importBackup(
             from: backupURL,
             modelContext: context,
-            tasks: [],
-            sessions: [],
-            events: [],
-            achievements: [],
             settings: importedSettings,
             focusState: importedFocusState
         )
@@ -1059,6 +1082,379 @@ struct DayDayUpTests {
         #expect(todayIntent.destinationRaw == "today")
         #expect(scoreIntent.destination == .score)
         #expect(scoreIntent.destinationRaw == "score")
+    }
+
+    @Test("task command workflow persists task events and deadline history")
+    @MainActor
+    func taskCommandWorkflow() throws {
+        let container = try inMemoryContainer()
+        let context = ModelContext(container)
+        let commands = TaskCommandService(modelContext: context)
+        let createdAt = date(2026, 7, 1, 9, 0)
+        let firstDeadline = date(2026, 7, 1, 12, 0)
+        var draft = TaskDraft(now: createdAt)
+        draft.name = "重构任务命令"
+        draft.direction = "DayDayUp"
+        draft.deadline = firstDeadline
+
+        let created = try commands.create(from: draft, now: createdAt)
+        #expect(created.task.name == "重构任务命令")
+
+        let revisedDeadline = date(2026, 7, 1, 13, 0)
+        draft.deadline = revisedDeadline
+        draft.progress = 0.5
+        let updated = try commands.update(created.task, from: draft, now: date(2026, 7, 1, 9, 30))
+        #expect(updated.didChangeDeadline)
+
+        var events = try context.fetch(FetchDescriptor<TaskEvent>())
+        #expect(events.filter { $0.type == .deadline }.map(\.occurredAt).sorted() == [firstDeadline, revisedDeadline])
+
+        _ = try commands.updateProgress(
+            created.task,
+            progress: 0.75,
+            note: "应用层已抽取",
+            now: date(2026, 7, 1, 10, 0)
+        )
+        let completed = try commands.complete(
+            created.task,
+            note: "补齐测试",
+            now: date(2026, 7, 1, 13, 5)
+        )
+        #expect(completed.completionStatus == .recovered)
+        #expect(created.task.progress == 1)
+        #expect(created.task.recoveryNote == "补齐测试")
+
+        events = try context.fetch(FetchDescriptor<TaskEvent>())
+        #expect(events.contains { $0.type == .recovered })
+
+        let session = LearningSession(
+            taskID: created.task.id,
+            startedAt: date(2026, 7, 1, 11, 0),
+            endedAt: date(2026, 7, 1, 11, 30),
+            note: "级联删除验证",
+            task: created.task
+        )
+        context.insert(session)
+        try context.save()
+        try commands.delete(created.task)
+        #expect(try context.fetch(FetchDescriptor<LearningTask>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<LearningSession>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<TaskEvent>()).isEmpty)
+    }
+
+    @Test("focus controller owns one persisted focus state")
+    @MainActor
+    func focusControllerWorkflow() throws {
+        let container = try inMemoryContainer()
+        let context = ModelContext(container)
+        let state = ActiveFocusState()
+        let first = LearningTask(
+            name: "第一任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 7, 2, 18, 0)
+        )
+        let second = LearningTask(
+            name: "第二任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 7, 2, 19, 0)
+        )
+        context.insert(state)
+        context.insert(first)
+        context.insert(second)
+        try context.save()
+
+        let controller = FocusSessionController()
+        controller.configure(modelContext: context, state: state)
+        let start = date(2026, 7, 2, 10, 0)
+        try controller.start(task: first, at: start)
+        try controller.pause(at: start.addingTimeInterval(60))
+        try controller.resume(at: start.addingTimeInterval(120))
+        try controller.updateDraftNote("专注记录")
+        let session = try controller.finish(note: "完成一轮", at: start.addingTimeInterval(180))
+
+        #expect(session?.activeSeconds == 120)
+        #expect(controller.taskID == nil)
+        #expect(state.isActive == false)
+        #expect(try context.fetch(FetchDescriptor<LearningSession>()).count == 1)
+
+        try controller.start(task: first, at: start.addingTimeInterval(300))
+        let switched = try controller.start(task: second, at: start.addingTimeInterval(360))
+        #expect(switched?.taskID == first.id)
+        #expect(controller.taskID == second.id)
+        #expect(try context.fetch(FetchDescriptor<LearningSession>()).count == 2)
+    }
+
+    @Test("reminder coordinator reads persisted events before inserting")
+    @MainActor
+    func reminderCoordinatorWorkflow() throws {
+        let container = try inMemoryContainer()
+        let context = ModelContext(container)
+        let deadline = date(2026, 7, 3, 12, 0)
+        let task = LearningTask(name: "提醒任务", details: "", direction: "", deadline: deadline)
+        let settings = AppSettings(reminderLeadMinutes: 30)
+        context.insert(task)
+        context.insert(settings)
+        try context.save()
+
+        let coordinator = ReminderCoordinator(modelContext: context)
+        let first = try coordinator.scan(now: date(2026, 7, 3, 11, 30, 1))
+        let repeated = try coordinator.scan(now: date(2026, 7, 3, 11, 31))
+        #expect(first.filter { $0.type == .leadReminder }.count == 1)
+        #expect(repeated.isEmpty)
+
+        task.deadline = date(2026, 7, 3, 13, 0)
+        try context.save()
+        let revised = try coordinator.scan(now: date(2026, 7, 3, 12, 30, 1))
+        #expect(revised.filter { $0.type == .leadReminder }.count == 1)
+    }
+
+    @Test("model integrity links legacy foreign keys and removes invalid singleton data")
+    @MainActor
+    func modelIntegrityRepair() throws {
+        let container = try inMemoryContainer()
+        let context = ModelContext(container)
+        let task = LearningTask(
+            name: "关系回填任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 7, 4, 18, 0)
+        )
+        let linkedSession = LearningSession(
+            taskID: task.id,
+            startedAt: date(2026, 7, 4, 10, 0),
+            endedAt: date(2026, 7, 4, 10, 30),
+            note: "旧外键"
+        )
+        let orphanSession = LearningSession(
+            taskID: UUID(),
+            startedAt: date(2026, 7, 4, 11, 0),
+            endedAt: date(2026, 7, 4, 11, 30),
+            note: "孤儿"
+        )
+        let linkedEvent = TaskEvent(taskID: task.id, type: .planned, note: "旧外键")
+        let invalidFocus = ActiveFocusState(taskID: UUID(), originalStartedAt: date(2026, 7, 4, 9, 0))
+        context.insert(task)
+        context.insert(linkedSession)
+        context.insert(orphanSession)
+        context.insert(linkedEvent)
+        context.insert(AppSettings(createdAt: date(2026, 7, 1, 8, 0)))
+        context.insert(AppSettings(createdAt: date(2026, 7, 2, 8, 0)))
+        context.insert(invalidFocus)
+        context.insert(ActiveFocusState())
+        try context.save()
+
+        let result = try ModelIntegrityCoordinator.repair(modelContext: context)
+
+        #expect(result.summary.linkedSessions == 1)
+        #expect(result.summary.linkedEvents == 1)
+        #expect(result.summary.removedOrphanSessions == 1)
+        #expect(result.summary.removedDuplicateSettings == 1)
+        #expect(result.summary.removedDuplicateFocusStates == 1)
+        #expect(result.summary.clearedInvalidFocus)
+        #expect(linkedSession.task?.id == task.id)
+        #expect(linkedEvent.task?.id == task.id)
+        #expect(try context.fetch(FetchDescriptor<AppSettings>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<ActiveFocusState>()).count == 1)
+    }
+
+    @Test("backup validation rejects future versions and orphan records")
+    func backupValidationRules() {
+        let settings = AppSettingsSnapshot(
+            reminderLeadMinutes: 30,
+            dailyReminderEnabled: true,
+            dailyReminderHour: 9,
+            dailyReminderMinute: 0,
+            overdueReminderEnabled: true,
+            didRequestNotificationAuthorization: false,
+            notificationStatusRaw: ReminderAuthorizationState.unknown.rawValue,
+            lastBackupURL: "",
+            appearanceModeRaw: AppAppearanceMode.system.rawValue,
+            glassTransparency: 0.55
+        )
+        let future = DayDayUpBackupDocument(
+            version: 99,
+            exportedAt: date(2026, 7, 5, 9, 0),
+            settings: settings,
+            activeFocus: nil,
+            tasks: [],
+            sessions: [],
+            events: [],
+            achievements: []
+        )
+        do {
+            try DayDayUpBackupService.validateBackup(future)
+            Issue.record("未来版本应被拒绝")
+        } catch let error as BackupValidationError {
+            #expect(error == .unsupportedVersion(99))
+        } catch {
+            Issue.record("返回了错误的验证错误：\(error)")
+        }
+
+        let orphan = DayDayUpBackupDocument(
+            version: DayDayUpBackupService.currentVersion,
+            exportedAt: date(2026, 7, 5, 9, 0),
+            settings: settings,
+            activeFocus: nil,
+            tasks: [],
+            sessions: [
+                LearningSessionSnapshot(
+                    id: UUID(),
+                    taskID: UUID(),
+                    startedAt: date(2026, 7, 5, 9, 0),
+                    endedAt: date(2026, 7, 5, 9, 30),
+                    note: "孤儿",
+                    activeSeconds: 1_800
+                )
+            ],
+            events: [],
+            achievements: []
+        )
+        do {
+            try DayDayUpBackupService.validateBackup(orphan)
+            Issue.record("孤儿记录应被拒绝")
+        } catch let error as BackupValidationError {
+            #expect(error == .invalidSession("引用了不存在的任务"))
+        } catch {
+            Issue.record("返回了错误的验证错误：\(error)")
+        }
+    }
+
+    @Test("backup merge keeps a newer local task")
+    @MainActor
+    func backupConflictRules() throws {
+        let taskID = UUID()
+        let oldTask = LearningTask(
+            id: taskID,
+            name: "备份旧任务",
+            details: "",
+            direction: "",
+            plannedAt: date(2026, 7, 1, 9, 0),
+            deadline: date(2026, 7, 8, 18, 0),
+            updatedAt: date(2026, 7, 2, 9, 0)
+        )
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let backupURL = directory.appendingPathComponent("conflict.json")
+        try DayDayUpBackupService.exportBackup(
+            to: backupURL,
+            tasks: [oldTask],
+            sessions: [],
+            events: [],
+            achievements: [],
+            settings: AppSettings(),
+            focusState: nil
+        )
+
+        let container = try inMemoryContainer()
+        let context = ModelContext(container)
+        let localTask = LearningTask(
+            id: taskID,
+            name: "本地新任务",
+            details: "",
+            direction: "",
+            plannedAt: date(2026, 7, 1, 9, 0),
+            deadline: date(2026, 7, 9, 18, 0),
+            updatedAt: date(2026, 7, 3, 9, 0)
+        )
+        let settings = AppSettings()
+        let focus = ActiveFocusState()
+        context.insert(localTask)
+        context.insert(settings)
+        context.insert(focus)
+        try context.save()
+
+        let summary = try DayDayUpBackupService.importBackup(
+            from: backupURL,
+            modelContext: context,
+            settings: settings,
+            focusState: focus
+        )
+
+        #expect(localTask.name == "本地新任务")
+        #expect(summary.skippedOlderTaskCount == 1)
+    }
+
+    @Test("versioned schema creates an in-memory container")
+    func versionedSchemaContainerRules() throws {
+        let schema = Schema(DayDayUpSchemaV1.models)
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        _ = try ModelContainer(
+            for: schema,
+            migrationPlan: DayDayUpMigrationPlan.self,
+            configurations: [configuration]
+        )
+    }
+
+    @Test("a copied existing store opens with the versioned schema")
+    @MainActor
+    func copiedExistingStoreMigration() throws {
+        let sourceURL = try DayDayUpModelStore.storeURL
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else { return }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let destinationURL = directory.appendingPathComponent(DayDayUpModelStore.storeFileName)
+        for suffix in ["", "-wal", "-shm"] {
+            let source = URL(fileURLWithPath: sourceURL.path + suffix)
+            let destination = URL(fileURLWithPath: destinationURL.path + suffix)
+            if FileManager.default.fileExists(atPath: source.path) {
+                try FileManager.default.copyItem(at: source, to: destination)
+            }
+        }
+
+        let container = try DayDayUpModelStore.makeContainer(at: destinationURL)
+        let context = ModelContext(container)
+        _ = try ModelIntegrityCoordinator.repair(modelContext: context)
+        let tasks = try context.fetch(FetchDescriptor<LearningTask>())
+        let taskIDs = Set(tasks.map(\.id))
+        #expect(try context.fetch(FetchDescriptor<LearningSession>()).allSatisfy { taskIDs.contains($0.taskID) })
+        #expect(try context.fetch(FetchDescriptor<TaskEvent>()).allSatisfy { taskIDs.contains($0.taskID) })
+    }
+
+    @Test("app router centralizes editor notification and widget destinations")
+    @MainActor
+    func appRouterWorkflow() {
+        let router = AppRouter()
+        router.openNewTask()
+        #expect(router.selectedSection == .tasks)
+        #expect(router.showingTaskEditor)
+        #expect(router.editingTask == nil)
+
+        let task = LearningTask(
+            name: "路由任务",
+            details: "",
+            direction: "",
+            deadline: date(2026, 7, 10, 18, 0)
+        )
+        router.openEditor(task)
+        #expect(router.editingTask?.id == task.id)
+        #expect(router.selectedTaskID == task.id)
+
+        router.route(
+            WidgetPendingIntent(
+                kind: .openSection,
+                taskID: nil,
+                destination: .score,
+                createdAt: date(2026, 7, 10, 9, 0)
+            )
+        )
+        #expect(router.selectedSection == .score)
+
+        router.route(
+            WidgetPendingIntent(
+                kind: .startFocus,
+                taskID: task.id,
+                destination: .today,
+                createdAt: date(2026, 7, 10, 9, 5)
+            )
+        )
+        #expect(router.selectedSection == .today)
+        #expect(router.selectedTaskID == task.id)
     }
 
     private func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int) -> Date {

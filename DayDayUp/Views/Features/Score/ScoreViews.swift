@@ -5,15 +5,11 @@ import UniformTypeIdentifiers
 
 struct ScoreDashboardView: View {
     let tasks: [LearningTask]
-    let sessions: [LearningSession]
-    let achievements: [AchievementRecord]
+    @Query(sort: \AchievementRecord.unlockedAt, order: .reverse) private var achievements: [AchievementRecord]
+    let metrics: AppMetrics
     let now: Date
     @Binding var selectedTaskID: UUID?
     @State private var displayedMonth = Date.now.monthStart()
-
-    private var metrics: AppMetrics {
-        MetricCalculator.calculate(tasks: tasks, sessions: sessions, now: now)
-    }
 
     private var metricColumns: [GridItem] {
         [GridItem(.adaptive(minimum: 160), spacing: 12)]

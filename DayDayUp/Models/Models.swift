@@ -246,6 +246,10 @@ final class LearningTask {
     var recoveryNote: String
     var reviewNote: String
     var updatedAt: Date = Date.now
+    @Relationship(deleteRule: .cascade, inverse: \LearningSession.task)
+    var sessions: [LearningSession] = []
+    @Relationship(deleteRule: .cascade, inverse: \TaskEvent.task)
+    var events: [TaskEvent] = []
 
     init(
         id: UUID = UUID(),
@@ -334,6 +338,7 @@ final class LearningSession {
     var endedAt: Date
     var note: String
     var activeSeconds: Double? = nil
+    var task: LearningTask?
 
     init(
         id: UUID = UUID(),
@@ -341,7 +346,8 @@ final class LearningSession {
         startedAt: Date,
         endedAt: Date,
         note: String,
-        activeSeconds: Double? = nil
+        activeSeconds: Double? = nil,
+        task: LearningTask? = nil
     ) {
         self.id = id
         self.taskID = taskID
@@ -349,6 +355,7 @@ final class LearningSession {
         self.endedAt = endedAt
         self.note = note
         self.activeSeconds = activeSeconds
+        self.task = task
     }
 
     var durationMinutes: Int {
@@ -505,7 +512,7 @@ final class AppSettings {
         didRequestNotificationAuthorization: Bool = false,
         notificationStatusRaw: String = ReminderAuthorizationState.unknown.rawValue,
         lastBackupURL: String = "",
-        appearanceModeRaw: String? = AppAppearanceMode.system.rawValue,
+        appearanceModeRaw: String? = AppAppearanceMode.light.rawValue,
         glassTransparency: Double = AppSettings.defaultGlassTransparency
     ) {
         self.id = id
@@ -528,7 +535,7 @@ final class AppSettings {
     }
 
     var appearanceMode: AppAppearanceMode {
-        get { AppAppearanceMode(rawValue: appearanceModeRaw ?? "") ?? .system }
+        get { AppAppearanceMode(rawValue: appearanceModeRaw ?? "") ?? .light }
         set { appearanceModeRaw = newValue.rawValue }
     }
 
@@ -549,19 +556,22 @@ final class TaskEvent {
     var typeRaw: String
     var occurredAt: Date
     var note: String
+    var task: LearningTask?
 
     init(
         id: UUID = UUID(),
         taskID: UUID,
         type: TaskEventType,
         occurredAt: Date = .now,
-        note: String
+        note: String,
+        task: LearningTask? = nil
     ) {
         self.id = id
         self.taskID = taskID
         self.typeRaw = type.rawValue
         self.occurredAt = occurredAt
         self.note = note
+        self.task = task
     }
 
     var type: TaskEventType {
@@ -613,6 +623,25 @@ struct AppMetrics {
     var unfinishedCount: Int
     var averageDelayDays: Double
     var score: Int
+
+    static let empty = AppMetrics(
+        plannedTaskCount: 0,
+        completionRate: 0,
+        onTimeRate: 0,
+        earlyRate: 0,
+        delayedRate: 0,
+        recoveredRate: 0,
+        closedLoopRate: 0,
+        stableFocusRate: 0,
+        reviewRate: 0,
+        totalFocusMinutes: 0,
+        todayFocusMinutes: 0,
+        weeklyFocusMinutes: 0,
+        directionFocusMinutes: [:],
+        unfinishedCount: 0,
+        averageDelayDays: 0,
+        score: 0
+    )
 
     var hasTasks: Bool {
         plannedTaskCount > 0

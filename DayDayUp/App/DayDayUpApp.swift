@@ -67,7 +67,7 @@ enum DayDayUpModelStore {
         }
     }
 
-    static func makeContainer() throws -> ModelContainer {
+    static func makeContainer(at explicitStoreURL: URL? = nil) throws -> ModelContainer {
         let schema = Schema([
             LearningTask.self,
             LearningSession.self,
@@ -76,10 +76,14 @@ enum DayDayUpModelStore {
             ActiveFocusState.self,
             AppSettings.self
         ])
-        let url = try storeURL
+        let url = try explicitStoreURL ?? storeURL
         try prepareStoreDirectory(for: url)
         let configuration = ModelConfiguration("DayDayUp", schema: schema, url: url, cloudKitDatabase: .none)
-        return try ModelContainer(for: schema, configurations: [configuration])
+        return try ModelContainer(
+            for: schema,
+            migrationPlan: DayDayUpMigrationPlan.self,
+            configurations: [configuration]
+        )
     }
 
     private static func prepareStoreDirectory(for url: URL) throws {

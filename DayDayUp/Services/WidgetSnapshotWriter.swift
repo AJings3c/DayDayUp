@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 #if canImport(WidgetKit)
 import WidgetKit
@@ -23,7 +24,8 @@ enum WidgetSnapshotWriter {
             try DayDayUpWidgetShared.writeDashboard(snapshot)
             reloadWidgetTimelines()
         } catch {
-            // Widgets are best-effort: a missing App Group should not interrupt app workflows.
+            Logger(subsystem: "com.daydayup.app", category: "Widgets")
+                .error("Widget snapshot write failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 

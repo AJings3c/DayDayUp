@@ -440,6 +440,8 @@ struct CountdownText: View {
     let completedAt: Date?
     var compact = false
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let text = countdownString(now: context.date)
@@ -450,6 +452,8 @@ struct CountdownText: View {
                 Text(text)
                     .font(.system(size: compact ? 28 : 46, weight: .semibold, design: .monospaced))
                     .foregroundStyle(displayColor(now: context.date))
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? nil : DayMotion.state, value: text)
                     .lineLimit(1)
                     .minimumScaleFactor(0.76)
             }

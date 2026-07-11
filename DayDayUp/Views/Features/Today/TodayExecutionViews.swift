@@ -5,19 +5,15 @@ import UniformTypeIdentifiers
 
 struct TodayExecutionView: View {
     let tasks: [LearningTask]
-    let sessions: [LearningSession]
     let now: Date
-    @Binding var activeFocusTaskID: UUID?
-    @Binding var activeFocusOriginalStartedAt: Date?
-    @Binding var activeFocusStartedAt: Date?
-    @Binding var activeFocusPausedAt: Date?
-    @Binding var activeFocusAccumulatedSeconds: Double
-    @Binding var activeFocusNote: String
+    @Query(sort: \LearningSession.startedAt, order: .reverse) private var sessions: [LearningSession]
+    @Bindable var focusController: FocusSessionController
     @Binding var selectedTaskID: UUID?
     let onBeginFocus: (LearningTask) -> Void
     let onPauseFocus: () -> Void
     let onResumeFocus: () -> Void
     let onFinishFocus: (String) -> Void
+    let onUpdateFocusNote: (String) -> Void
     let onUpdateProgress: (LearningTask, Double, String) -> Void
     let onMarkComplete: (LearningTask) -> Void
     let onNewTask: () -> Void
@@ -28,31 +24,34 @@ struct TodayExecutionView: View {
     }
 
     private var activeTask: LearningTask? {
-        activeFocusTaskID.flatMap { id in tasks.first(where: { $0.id == id }) }
+        focusController.taskID.flatMap { id in tasks.first(where: { $0.id == id }) }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                PageTitle(title: "今日执行", subtitle: "开始专注、记录学习时段、更新完成度，动作都集中在这里。")
+                PageTitle(title: "今日执行", subtitle: "选一颗松果，专注推进，再留下记录。")
 
                 FocusSessionPanel(
                     activeTask: activeTask,
-                    originalStartedAt: activeFocusOriginalStartedAt,
-                    startedAt: activeFocusStartedAt,
-                    pausedAt: activeFocusPausedAt,
-                    accumulatedSeconds: activeFocusAccumulatedSeconds,
-                    note: $activeFocusNote,
+                    originalStartedAt: focusController.originalStartedAt,
+                    startedAt: focusController.currentStartedAt,
+                    pausedAt: focusController.pausedAt,
+                    accumulatedSeconds: focusController.accumulatedSeconds,
+                    note: Binding(
+                        get: { focusController.draftNote },
+                        set: { note in onUpdateFocusNote(note) }
+                    ),
                     onPause: onPauseFocus,
                     onResume: onResumeFocus,
                     onFinish: onFinishFocus
                 )
 
-                HStack(spacing: 12) {
-                    MetricCard(title: "待完成任务", value: "\(incompleteTasks.count)", subtitle: "未闭环任务", tint: DayColor.primary)
-                    MetricCard(title: "今日专注", value: "\(todayFocusMinutes)", subtitle: "分钟", tint: DayColor.success)
-                    MetricCard(title: "逾期未完成", value: "\(TaskCollectionStatusPolicy.overdueOpenCount(tasks: tasks, now: now))", subtitle: "优先处理", tint: DayColor.danger)
-                }
+                TodayPulseLedger(
+                    incompleteCount: incompleteTasks.count,
+                    focusMinutes: todayFocusMinutes,
+                    overdueCount: TaskCollectionStatusPolicy.overdueOpenCount(tasks: tasks, now: now)
+                )
 
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeader(title: "执行队列", systemImage: "list.bullet.rectangle")
@@ -101,6 +100,47 @@ struct TodayExecutionView: View {
 
     private var selectedTask: LearningTask? {
         selectedTaskID.flatMap { id in incompleteTasks.first(where: { $0.id == id }) }
+    }
+}
+
+private struct TodayPulseLedger: View {
+    let incompleteCount: Int
+    let focusMinutes: Int
+    let overdueCount: Int
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Label("今日脉搏", systemImage: "waveform.path")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(DayColor.primaryDeep)
+                .frame(width: 112, alignment: .leading)
+
+            Divider().padding(.vertical, 2)
+            item(value: "\(incompleteCount)", label: "待完成", tint: DayColor.primary)
+            item(value: "\(focusMinutes)", label: "专注分钟", tint: DayColor.success)
+            item(value: "\(overdueCount)", label: "逾期待补", tint: overdueCount > 0 ? DayColor.danger : DayColor.muted)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .dayPanel(cornerRadius: 12)
+    }
+
+    private func item(value: String, label: String, tint: Color) -> some View {
+        HStack(spacing: 8) {
+            Text(value)
+                .font(.system(size: 23, weight: .semibold, design: .monospaced))
+                .foregroundStyle(tint)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : DayMotion.state, value: value)
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(DayColor.muted)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(value)")
     }
 }
 
@@ -269,6 +309,8 @@ struct FocusSessionPanel: View {
     let onResume: () -> Void
     let onFinish: (String) -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "当前专注", systemImage: "timer")
@@ -291,6 +333,8 @@ struct FocusSessionPanel: View {
                             Text("已专注 \(activeDurationString(now: context.date))")
                                 .font(.system(.title2, design: .monospaced).weight(.semibold))
                                 .foregroundStyle(pausedAt == nil ? DayColor.primary : DayColor.warning)
+                                .contentTransition(.numericText())
+                                .animation(reduceMotion ? nil : DayMotion.state, value: activeDurationString(now: context.date))
                         }
                         Text("开始时间：\(originalStartedAt.formattedDateTime())")
                             .font(.caption)
@@ -344,6 +388,8 @@ struct FocusSessionPanel: View {
         }
         .padding(18)
         .dayLiquidPanel(cornerRadius: 16, interactive: true, emphasized: activeTask != nil)
+        .animation(reduceMotion ? nil : DayMotion.state, value: activeTask?.id)
+        .animation(reduceMotion ? nil : DayMotion.feedback, value: pausedAt)
     }
 
     private func activeDurationString(now: Date) -> String {
@@ -363,6 +409,8 @@ struct TaskProgressRow: View {
 
     @State private var progressDraft: Double
     @State private var noteDraft = ""
+    @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         task: LearningTask,
@@ -413,6 +461,8 @@ struct TaskProgressRow: View {
                     .accessibilityLabel("任务完成度")
                 Text(progressDraft.percentText)
                     .font(.system(.body, design: .monospaced))
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? nil : DayMotion.feedback, value: progressDraft)
                     .frame(width: 54, alignment: .trailing)
                 TextField("进度备注", text: $noteDraft)
                     .textFieldStyle(.roundedBorder)
@@ -433,11 +483,18 @@ struct TaskProgressRow: View {
             }
         }
         .padding(16)
-        .background(isSelected ? DayColor.selected : DayColor.workbench, in: RoundedRectangle(cornerRadius: 12))
+        .background(
+            isSelected ? DayColor.selected : (isHovered ? DayColor.hover : DayColor.workbench),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? DayColor.primary.opacity(0.45) : DayColor.border, lineWidth: 1)
+                .stroke(isSelected ? DayColor.primary.opacity(0.62) : DayColor.border, lineWidth: 1)
         )
+        .scaleEffect(isHovered && !reduceMotion ? 1.002 : 1)
+        .onHover { isHovered = $0 }
+        .animation(reduceMotion ? nil : DayMotion.feedback, value: isHovered)
+        .animation(reduceMotion ? nil : DayMotion.state, value: isSelected)
         .accessibilityElement(children: .contain)
     }
 }

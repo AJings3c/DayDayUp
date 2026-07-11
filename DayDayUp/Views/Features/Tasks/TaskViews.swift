@@ -121,6 +121,74 @@ struct TaskManagementView: View {
     }
 }
 
+struct TaskDetailInspectorContainer: View {
+    let task: LearningTask
+    let now: Date
+    let onEditTask: (LearningTask) -> Void
+    let onBeginFocus: (LearningTask) -> Void
+    let onMarkComplete: (LearningTask) -> Void
+    let onRecordBlock: (LearningTask, String) -> Void
+    let onRecordRecovery: (LearningTask, String) -> Void
+    let onSaveReview: (LearningTask, String) -> Void
+    let onDeleteTask: (LearningTask) -> Void
+
+    @Query private var events: [TaskEvent]
+    @Query private var sessions: [LearningSession]
+    @Query private var achievements: [AchievementRecord]
+
+    init(
+        task: LearningTask,
+        now: Date,
+        onEditTask: @escaping (LearningTask) -> Void,
+        onBeginFocus: @escaping (LearningTask) -> Void,
+        onMarkComplete: @escaping (LearningTask) -> Void,
+        onRecordBlock: @escaping (LearningTask, String) -> Void,
+        onRecordRecovery: @escaping (LearningTask, String) -> Void,
+        onSaveReview: @escaping (LearningTask, String) -> Void,
+        onDeleteTask: @escaping (LearningTask) -> Void
+    ) {
+        self.task = task
+        self.now = now
+        self.onEditTask = onEditTask
+        self.onBeginFocus = onBeginFocus
+        self.onMarkComplete = onMarkComplete
+        self.onRecordBlock = onRecordBlock
+        self.onRecordRecovery = onRecordRecovery
+        self.onSaveReview = onSaveReview
+        self.onDeleteTask = onDeleteTask
+        let taskID = task.id
+        _events = Query(
+            filter: #Predicate<TaskEvent> { $0.taskID == taskID },
+            sort: [SortDescriptor(\TaskEvent.occurredAt, order: .reverse)]
+        )
+        _sessions = Query(
+            filter: #Predicate<LearningSession> { $0.taskID == taskID },
+            sort: [SortDescriptor(\LearningSession.startedAt, order: .reverse)]
+        )
+        _achievements = Query(
+            filter: #Predicate<AchievementRecord> { $0.relatedTaskID == taskID },
+            sort: [SortDescriptor(\AchievementRecord.unlockedAt, order: .reverse)]
+        )
+    }
+
+    var body: some View {
+        TaskDetailInspector(
+            task: task,
+            events: events,
+            sessions: sessions,
+            achievements: achievements,
+            now: now,
+            onEditTask: onEditTask,
+            onBeginFocus: onBeginFocus,
+            onMarkComplete: onMarkComplete,
+            onRecordBlock: onRecordBlock,
+            onRecordRecovery: onRecordRecovery,
+            onSaveReview: onSaveReview,
+            onDeleteTask: onDeleteTask
+        )
+    }
+}
+
 struct TaskEditorSheet: View {
     let task: LearningTask?
     let onSave: (TaskDraft) -> Void

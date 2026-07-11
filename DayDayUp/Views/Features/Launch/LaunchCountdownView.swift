@@ -18,30 +18,19 @@ struct LaunchCountdownView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 PageTitle(
                     title: "启动倒计时",
-                    subtitle: "打开后先看最近一个未完成任务的 deadline，把下一步学习行动放到眼前。"
+                    subtitle: "先看时间，再收下一颗松果。"
                 )
 
-                GlassHost(spacing: 18) {
-                    HStack(alignment: .center, spacing: 28) {
-                        squirrelPanel
-                        deadlinePanel
-                    }
-                    .padding(24)
-                    .dayGlass(cornerRadius: 16, interactive: true)
-                }
+                launchHero
 
                 if let nextUpcomingTask, nextUpcomingTask.id != task?.id {
                     NextDeadlineStrip(task: nextUpcomingTask, now: now)
                 }
 
-                HStack(spacing: 12) {
-                    MetricCard(title: "执行力评分", value: metrics.scoreText, subtitle: metrics.scoreLabel, tint: DayColor.primaryDeep)
-                    MetricCard(title: "任务闭环率", value: metrics.closedLoopRate.percentText, subtitle: "完成并达到标准", tint: DayColor.success)
-                    MetricCard(title: "补完成率", value: metrics.recoveredRate.percentText, subtitle: "逾期后补上的比例", tint: DayColor.recovered)
-                }
+                LaunchMetricLedger(metrics: metrics)
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12)], spacing: 12) {
                     LaunchNextActionPanel(
@@ -59,6 +48,104 @@ struct LaunchCountdownView: View {
             .padding(28)
         }
         .dayPageBackground()
+    }
+
+    private var launchHero: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top, spacing: 20) {
+                VStack(alignment: .leading, spacing: 9) {
+                    statusBadge
+
+                    Text(task?.name ?? "今天的篮子还空着")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(DayColor.text)
+                        .lineLimit(2)
+
+                    Text(task?.details.nilIfBlank ?? "创建一个有明确截止时间和完成标准的学习任务。")
+                        .font(.callout)
+                        .foregroundStyle(DayColor.muted)
+                        .lineLimit(2)
+
+                    Text(squirrelTitle)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(statusColor)
+                }
+
+                Spacer(minLength: 12)
+
+                SquirrelImage(mood: squirrelMood, size: 108, animated: true)
+                    .padding(8)
+                    .background(DayColor.squirrelSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+
+            Divider()
+
+            HStack(alignment: .bottom, spacing: 24) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if let task {
+                        CountdownText(deadline: task.deadline, completedAt: task.completedAt)
+                        Label(task.deadline.formattedDateTime(), systemImage: "calendar.badge.clock")
+                            .font(.caption)
+                            .foregroundStyle(DayColor.muted)
+                    } else {
+                        Text("00 天 00:00:00")
+                            .font(.system(size: 42, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(DayColor.muted)
+                        Text("没有待监督的任务")
+                            .font(.callout)
+                            .foregroundStyle(DayColor.muted)
+                    }
+                }
+
+                Spacer(minLength: 12)
+
+                VStack(spacing: 10) {
+                    heroPrimaryAction
+                    heroSecondaryAction
+                }
+                .frame(width: 220)
+            }
+
+            AcornProgressTrack(
+                progress: task?.progress ?? 0,
+                tint: task?.status(now: now).color ?? DayColor.squirrel
+            )
+        }
+        .padding(24)
+        .background(DayColor.focusSurface.opacity(0.88), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .dayLiquidPanel(cornerRadius: 16, interactive: true, emphasized: task != nil)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: task?.status(now: now).rawValue)
+    }
+
+    @ViewBuilder
+    private var heroPrimaryAction: some View {
+        if let task {
+            Button {
+                task.completedAt == nil ? onBeginFocus(task) : onStartToday()
+            } label: {
+                Label(task.completedAt == nil ? "开始专注" : "查看今日执行", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        } else {
+            Button(action: onNewTask) {
+                Label("创建学习任务", systemImage: "plus")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut("n", modifiers: [.command])
+        }
+    }
+
+    private var heroSecondaryAction: some View {
+        Button(action: task == nil ? onCreateSampleTask : onTaskDetail) {
+            Label(task == nil ? "载入示例" : "查看任务详情", systemImage: task == nil ? "sparkles" : "sidebar.right")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
     }
 
     private var squirrelPanel: some View {
@@ -201,6 +288,56 @@ struct LaunchCountdownView: View {
 
     private var squirrelMood: SquirrelMood {
         SquirrelMood(status: task?.status(now: now))
+    }
+}
+
+private struct LaunchMetricLedger: View {
+    let metrics: AppMetrics
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Label("本周节奏", systemImage: "waveform.path.ecg")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(DayColor.primaryDeep)
+                .frame(width: 112, alignment: .leading)
+
+            Divider()
+                .padding(.vertical, 2)
+
+            ledgerItem(title: "执行力", value: metrics.scoreText, detail: metrics.scoreLabel, tint: DayColor.primaryDeep)
+            ledgerItem(title: "闭环", value: metrics.closedLoopRate.percentText, detail: "达到标准", tint: DayColor.success)
+            ledgerItem(title: "补完成", value: metrics.recoveredRate.percentText, detail: "逾期补回", tint: DayColor.recovered)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .dayPanel(cornerRadius: 12)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func ledgerItem(title: String, value: String, detail: String, tint: Color) -> some View {
+        HStack(spacing: 10) {
+            Text(value)
+                .font(.system(size: 23, weight: .semibold, design: .monospaced))
+                .foregroundStyle(tint)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : DayMotion.state, value: value)
+                .frame(minWidth: 54, alignment: .trailing)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DayColor.text)
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(DayColor.muted)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title) \(value)，\(detail)")
     }
 }
 

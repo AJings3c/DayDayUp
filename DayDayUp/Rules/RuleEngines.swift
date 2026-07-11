@@ -272,17 +272,42 @@ enum TaskCalendarPolicy {
     }
 }
 
+struct TaskEventOccurrenceKey: Hashable {
+    let taskID: UUID
+    let type: TaskEventType
+    let occurredAt: Date
+
+    init(taskID: UUID, type: TaskEventType, occurredAt: Date) {
+        self.taskID = taskID
+        self.type = type
+        self.occurredAt = occurredAt
+    }
+
+    init(_ event: TaskEvent) {
+        self.init(taskID: event.taskID, type: event.type, occurredAt: event.occurredAt)
+    }
+}
+
 enum DeadlineEventRecorder {
     static func missingEvents(
         tasks: [LearningTask],
         events: [TaskEvent],
         now: Date = .now
     ) -> [TaskEvent] {
-        let missedTaskIDs = Set(events.filter { $0.type == .missed }.map(\.taskID))
+        let existingOccurrences = Set(
+            events
+                .filter { $0.type == .missed }
+                .map(TaskEventOccurrenceKey.init)
+        )
         return tasks.compactMap { task in
+            let occurrence = TaskEventOccurrenceKey(
+                taskID: task.id,
+                type: .missed,
+                occurredAt: task.deadline
+            )
             guard task.completedAt == nil,
                   task.deadline < now,
-                  !missedTaskIDs.contains(task.id) else {
+                  !existingOccurrences.contains(occurrence) else {
                 return nil
             }
             return TaskEvent(
@@ -313,10 +338,10 @@ enum ReminderRuntimePolicy {
         notificationState: ReminderAuthorizationState,
         now: Date = .now
     ) -> [TaskEvent] {
-        let existingReminderKeys = Set(
+        let existingReminderOccurrences = Set(
             events
                 .filter { $0.type == .leadReminder || $0.type == .overdueReminder }
-                .map { reminderKey(taskID: $0.taskID, type: $0.type) }
+                .map(TaskEventOccurrenceKey.init)
         )
 
         return tasks.flatMap { task -> [TaskEvent] in
@@ -324,9 +349,14 @@ enum ReminderRuntimePolicy {
 
             var reminders: [TaskEvent] = []
             let leadDate = task.deadline.addingTimeInterval(-Double(max(1, settings.reminderLeadMinutes)) * 60)
+            let leadOccurrence = TaskEventOccurrenceKey(
+                taskID: task.id,
+                type: .leadReminder,
+                occurredAt: leadDate
+            )
             if leadDate <= now,
                task.deadline > now,
-               !existingReminderKeys.contains(reminderKey(taskID: task.id, type: .leadReminder)) {
+               !existingReminderOccurrences.contains(leadOccurrence) {
                 reminders.append(
                     TaskEvent(
                         taskID: task.id,
@@ -342,9 +372,14 @@ enum ReminderRuntimePolicy {
             }
 
             let overdueDate = task.deadline.addingTimeInterval(5 * 60)
+            let overdueOccurrence = TaskEventOccurrenceKey(
+                taskID: task.id,
+                type: .overdueReminder,
+                occurredAt: overdueDate
+            )
             if settings.overdueReminderEnabled,
                overdueDate <= now,
-               !existingReminderKeys.contains(reminderKey(taskID: task.id, type: .overdueReminder)) {
+               !existingReminderOccurrences.contains(overdueOccurrence) {
                 reminders.append(
                     TaskEvent(
                         taskID: task.id,
@@ -361,10 +396,6 @@ enum ReminderRuntimePolicy {
 
             return reminders
         }
-    }
-
-    private static func reminderKey(taskID: UUID, type: TaskEventType) -> String {
-        "\(taskID.uuidString)-\(type.rawValue)"
     }
 
     private static func reminderNote(

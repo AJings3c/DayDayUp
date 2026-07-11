@@ -175,8 +175,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 ```text
 DayDayUp/
 ├── App/                 应用入口与全局启动配置
+├── Application/         任务命令、专注状态机、提醒、成就与 Widget 协调
 ├── Design/              颜色、玻璃效果、小松鼠状态图和通用样式
 ├── Models/              SwiftData 模型、任务状态、deadline 和事件定义
+├── Persistence/         版本化 Schema、关系回填、单例与数据完整性修复
 ├── Rules/               评分、日历、里程碑、逾期事件和提醒策略
 ├── Services/            提醒调度、Widget 快照、备份导入导出
 ├── Shared/              App 与 Widget 共用的数据结构

@@ -9,9 +9,9 @@ import WidgetKit
 struct SettingsBackupView: View {
     let settings: AppSettings?
     let tasks: [LearningTask]
-    let sessions: [LearningSession]
-    let events: [TaskEvent]
-    let achievements: [AchievementRecord]
+    @Query(sort: \LearningSession.startedAt, order: .reverse) private var sessions: [LearningSession]
+    @Query(sort: \TaskEvent.occurredAt, order: .reverse) private var events: [TaskEvent]
+    @Query(sort: \AchievementRecord.unlockedAt, order: .reverse) private var achievements: [AchievementRecord]
     let focusState: ActiveFocusState?
     let lastReminderScanAt: Date?
     let onAppearanceChanged: () -> Void
